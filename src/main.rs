@@ -1,35 +1,43 @@
-use sequencer::{get_text, InteractionParser};
-use std::time::Instant;
-
-extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
+extern crate pretty_env_logger;
+
+use std::time::Instant;
+
+use sequencer::parser::{InteractionParser, ParticipantParser};
+use sequencer::{get_text, parse_diagram};
 
 fn main() {
     pretty_env_logger::init();
 
     let instant = Instant::now();
 
-    // let parser = ParticipantParser::default();
-    // debug!(
-    //     "Initialised participant parser in {}ms",
-    //     instant.elapsed().as_millis()
-    // );
-    // let set = parser.parse_participants(get_text().lines());
-    //
-    // debug!("Got participants: {:?}", set);
+    // use_participant_parser();
 
-    let interaction_parser = InteractionParser::default();
-    debug!(
-        "Initialised interaction parser in {}ms",
-        instant.elapsed().as_millis()
-    );
-    let interactions = interaction_parser.parse_interactions(get_text().lines());
-    debug!("Got interactions: {:?}", interactions);
+    // use_interaction_parser();
+
+    let diagram = parse_diagram(get_text().lines());
+    info!("{:?}", diagram);
+
+    sequencer::rendering::do_render(&diagram);
 
     info!(
         "Finished in {} micros ({}ms)",
         instant.elapsed().as_micros(),
         instant.elapsed().as_millis()
     );
+}
+
+#[allow(dead_code)]
+fn use_interaction_parser() {
+    let interaction_parser = InteractionParser::default();
+    let interactions = interaction_parser.parse_interactions(get_text().lines());
+    debug!("Got interactions: {:?}", interactions);
+}
+
+#[allow(dead_code)]
+fn use_participant_parser() {
+    let parser = ParticipantParser::default();
+    let set = parser.parse_participants(get_text().lines());
+    debug!("Got participants: {:?}", set);
 }
