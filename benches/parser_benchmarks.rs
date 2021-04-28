@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use sequencer::{InteractionParser, ParticipantParser};
+use sequencer::parser::{InteractionParser, ParticipantParser};
 
 pub fn get_text() -> String {
     String::from(
