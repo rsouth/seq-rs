@@ -8,7 +8,7 @@ use crate::parser::{InteractionParser, InteractionSet};
 use std::str::Lines;
 
 #[derive(Debug)]
-pub struct Diagram(InteractionSet);
+pub struct Diagram(pub InteractionSet);
 
 pub fn parse_diagram(lines: Lines) -> Diagram {
     let interactions = InteractionParser::default().parse_interactions(lines);

@@ -1,32 +1,31 @@
 use std::sync::Arc;
 use std::time::Instant;
 
+use euclid::Point2D;
+use font_kit::canvas::RasterizationOptions;
 use font_kit::family_name::FamilyName;
+use font_kit::hinting::HintingOptions;
 use font_kit::loaders::directwrite::Font;
 use font_kit::properties::{Properties, Weight};
 use font_kit::source::SystemSource;
 use itertools::Itertools;
-use raqote::{
-    AntialiasMode, Color, DrawOptions, DrawTarget, IntPoint, Path, PathBuilder, Point, SolidSource,
-    Source, Transform, Vector,
-};
-
-use crate::rendering::RenderingConstants::{
-    DiagramPadding, GapBetweenInteractions, ParticipantHeight, ParticipantWidth,
-};
-use crate::Diagram;
-use euclid::Point2D;
-use font_kit::canvas::RasterizationOptions;
-use font_kit::hinting::HintingOptions;
 use pathfinder_geometry::transform2d::Transform2F;
 use pathfinder_geometry::vector::vec2f;
+use raqote::{Color, DrawOptions, DrawTarget, Path, PathBuilder, Point, SolidSource, Source};
+
+use crate::rendering::RenderingConstants::{
+    DiagramPadding, GapBetweenInteractions, ParticipantHeight,
+};
+use crate::Diagram;
+use std::ops::AddAssign;
+
+// todo replace any rendered chars in the input text which don't have a glyph in the font with another char
 
 enum RenderingConstants {
     DiagramPadding,
 
     // Participant
     ParticipantHeight,
-    ParticipantWidth, // todo should be calculated from name length
 
     // Interactions
     GapBetweenInteractions,
@@ -38,12 +37,25 @@ impl RenderingConstants {
             RenderingConstants::DiagramPadding => 10,
             RenderingConstants::ParticipantHeight => 50,
             RenderingConstants::GapBetweenInteractions => 100,
-            RenderingConstants::ParticipantWidth => 50,
         }
     }
 }
 
-fn calculate_diagram_height(diagram: &Diagram) -> i32 {
+pub struct RenderingContext {
+    font: Font,
+    participant_font_size: f32,
+}
+
+impl Default for RenderingContext {
+    fn default() -> Self {
+        RenderingContext {
+            font: get_system_font(),
+            participant_font_size: 40.,
+        }
+    }
+}
+
+pub fn calculate_diagram_height(diagram: &Diagram) -> i32 {
     let start = Instant::now();
 
     let interaction_count = diagram.0.len() as i32;
@@ -58,10 +70,21 @@ fn calculate_diagram_height(diagram: &Diagram) -> i32 {
     height
 }
 
-fn calculate_diagram_width(diagram: &Diagram) -> i32 {
+pub fn calculate_diagram_width(rc: &RenderingContext, diagram: &Diagram) -> i32 {
     let start = Instant::now();
 
-    let width = DiagramPadding.value() + (participant_count(diagram) * ParticipantWidth.value());
+    let partic_width: i32 = diagram
+        .0
+        .iter()
+        .map(|p| vec![&p.from_participant.name, &p.to_participant.name])
+        .flatten()
+        .map(|p| measure_text(&rc.font, rc.participant_font_size, p).unwrap())
+        .map(|p| p.width())
+        .sum();
+
+    let width = DiagramPadding.value()
+        + (participant_count(diagram) * DiagramPadding.value())
+        + partic_width;
     debug!(
         "Calculated width {} in {}µs",
         width,
@@ -126,20 +149,10 @@ fn rect_path(width: f32, height: f32) -> Path {
     rpath
 }
 
-fn measure_string_width(text: &str, font: &Font, point_size: f32) -> i32 {
-    let x = font.advance(font.glyph_for_char('A').unwrap()).unwrap();
-    // font.
-    // .typographic_bounds(font.glyph_for_char('A').unwrap())
-    // .unwrap();
-    debug!("Rect is {:?}", x);
-    x.x() as i32
-}
-
 pub fn measure_text(
     font: &Font,
     point_size: f32,
     text: &str,
-    antialias_mode: AntialiasMode,
 ) -> Result<euclid::Rect<i32, euclid::UnknownUnit>, font_kit::error::GlyphLoadingError> {
     measure_glyphs(
         font,
@@ -151,7 +164,6 @@ pub fn measure_text(
 
             Some((id, position))
         }),
-        antialias_mode,
     )
 }
 
@@ -159,26 +171,14 @@ pub fn measure_glyphs(
     font: &Font,
     point_size: f32,
     glyphs: impl IntoIterator<Item = (u32, Point)>,
-    antialias_mode: AntialiasMode,
 ) -> Result<euclid::Rect<i32, euclid::UnknownUnit>, font_kit::error::GlyphLoadingError> {
-    // let antialias_mode: RasterizationOptions = antialias_mode.into();
     let mut combined_bounds = euclid::Rect::zero();
     for (id, position) in glyphs.into_iter() {
         let bounds = font.raster_bounds(
             id,
             point_size,
-            // Transform2F::default().translate(),
-            Transform2F::default()
-                // Transform2F::row_major(
-                // self.transform.m11,
-                // self.transform.m12,
-                // self.transform.m21,
-                // self.transform.m22,
-                // 50., 50., 0., 0., 0., 0.,
-                // )
-                .translate(vec2f(position.x, position.y)),
-            // Transform::default().post_translate(Vector::new(0., 0.)).,
-            // raqote::Transform::row_major()
+            // tform,
+            Transform2F::default().translate(vec2f(position.x, position.y)),
             HintingOptions::None,
             RasterizationOptions::SubpixelAa,
         );
@@ -195,13 +195,36 @@ pub fn measure_glyphs(
     Ok(combined_bounds)
 }
 
+fn draw_participant_names(dt: &mut DrawTarget, d: &Diagram) {
+    let font = get_system_font();
+    let src = Source::Solid(SolidSource::from(Color::new(200, 150, 30, 30)));
+
+    let mut count = 0;
+    d.0.iter()
+        .map(|p| vec![&p.from_participant, &p.to_participant])
+        .flatten()
+        .unique()
+        .for_each(|p| {
+            count.add_assign(1);
+            let x = DiagramPadding.value()
+                + measure_text(&font, 40., &p.name).unwrap().width()
+                + (count * DiagramPadding.value());
+            let point = Point::new(x as f32, 10.);
+            dt.draw_text(&font, 40., &p.name, point, &src, &DrawOptions::new())
+        });
+}
+
 pub fn do_render(diagram: &Diagram) {
+    let rendering_context = RenderingContext::default();
+
     let height = calculate_diagram_height(diagram);
-    let width = calculate_diagram_width(diagram);
+    let width = calculate_diagram_width(&rendering_context, diagram);
 
     let start = Instant::now();
     let mut dt = DrawTarget::new(width, height);
     debug!("Created DrawTarget in {}µs", start.elapsed().as_micros());
+
+    draw_participant_names(&mut dt, diagram);
 
     let rpath = rect_path(width as f32, height as f32);
 
@@ -219,18 +242,19 @@ pub fn do_render(diagram: &Diagram) {
 
     // let font = get_font();
     let font = get_system_font();
-    measure_string_width("", &font, 40.);
-    let result = measure_text(&font, 40.0, "AAA", AntialiasMode::None);
+    let result = measure_text(&font, 40.0, "AAA");
 
     println!("Result is: {:?}", result);
 
     let start = Instant::now();
-    let text = "Toggle Button";
+    let text = "HCenter";
+    let textwidth = measure_text(&font, 24., text);
+    let hcenterx = (width as f32 / 2.) - (textwidth.unwrap().width() as f32 / 2.);
     dt.draw_text(
         &font,
         24.,
         text,
-        Point::new(30., 30.),
+        Point::new(hcenterx, 30.),
         &Source::Solid(SolidSource {
             r: 0,
             g: 0,
@@ -258,12 +282,12 @@ pub fn do_render(diagram: &Diagram) {
 #[test]
 fn test_measure_text() {
     let font = get_system_font();
-    let result = measure_text(&font, 20., "A", AntialiasMode::None);
+    let result = measure_text(&font, 20., "A");
     print!("{:?}", result);
-    let result = measure_text(&font, 20., "AA", AntialiasMode::None);
+    let result = measure_text(&font, 20., "AA");
     print!("{:?}", result);
-    let result = measure_text(&font, 20., "AAA", AntialiasMode::None);
+    let result = measure_text(&font, 20., "AAA");
     print!("{:?}", result);
-    let result = measure_text(&font, 20., "AAAA", AntialiasMode::None);
+    let result = measure_text(&font, 20., "AAAA");
     print!("{:?}", result);
 }
