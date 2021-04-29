@@ -15,12 +15,6 @@ pub struct Participant {
     pub name: String,
 }
 
-impl Participant {
-    fn new(name: String) -> Participant {
-        Participant { name }
-    }
-}
-
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub struct Interaction {
     pub from_participant: Participant,
@@ -32,19 +26,16 @@ pub struct Interaction {
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Clone)]
 pub struct Message(String);
 
-// =========================================
+// == Participant Parser ==================================
 pub struct ParticipantParser {
     partic_regex: Regex,
 }
 
 impl Default for ParticipantParser {
     fn default() -> Self {
-        let instant = Instant::now();
-        let pp = ParticipantParser {
+        ParticipantParser {
             partic_regex: regex::Regex::new("^(\\w*) -+>+ (\\w*):?.*$").unwrap(),
-        };
-        debug!("Created PP in {}ms", instant.elapsed().as_millis());
-        pp
+        }
     }
 }
 
@@ -57,17 +48,26 @@ impl ParticipantParser {
             .filter_map(|p| self.partic_regex.captures(p))
             .map(|p| vec![p.index(1).to_string(), p.index(2).to_string()])
             .flatten()
-            .map(|p| Participant::new(p))
+            .map(|p| Participant { name: p })
             .collect::<ParticSet>();
         debug!("Parsed participants: {:?}", parsed_participants);
         parsed_participants
     }
 }
 
-// =========================================
+// == Interaction Parser ==================================
 pub struct InteractionParser {
     interaction_regex: Regex,
     counter: AtomicI32,
+}
+
+impl Default for InteractionParser {
+    fn default() -> Self {
+        InteractionParser {
+            interaction_regex: regex::Regex::new("^(.+)(\\s+-+>+\\s+)([^:]+):?(.*)$").unwrap(),
+            counter: AtomicI32::default(),
+        }
+    }
 }
 
 impl InteractionParser {
@@ -85,8 +85,12 @@ impl InteractionParser {
             .filter_map(|p| self.interaction_regex.captures(p))
             .filter_map(|p| {
                 if p.len() >= 3 {
-                    let from_participant = Participant::new(p.index(1).trim().to_string());
-                    let to_participant = Participant::new(p.index(3).trim().to_string());
+                    let from_participant = Participant {
+                        name: p.index(1).trim().to_string(),
+                    };
+                    let to_participant = Participant {
+                        name: p.index(3).trim().to_string(),
+                    };
                     let message = if p.len() > 3 {
                         if p.index(4).trim().is_empty() {
                             None
@@ -114,19 +118,7 @@ impl InteractionParser {
     }
 }
 
-impl Default for InteractionParser {
-    fn default() -> Self {
-        let instant = Instant::now();
-        let ip = InteractionParser {
-            interaction_regex: regex::Regex::new("^(.+)(\\s+-+>+\\s+)([^:]+):?(.*)$").unwrap(),
-            counter: AtomicI32::default(),
-        };
-        debug!("Created IP in {}ms", instant.elapsed().as_millis());
-        ip
-    }
-}
-
-// ==========================================
+// == Tests ===============================================
 
 #[test]
 fn test_parse_interactions() {
@@ -175,11 +167,15 @@ fn test_parse_interactions() {
     let set = parser.parse_interactions("One -> Two Do the kung fu".lines());
     assert_eq!(1, set.len());
     assert_eq!(
-        Participant::new("One".to_string()),
+        Participant {
+            name: "One".to_string()
+        },
         set.get(0).unwrap().from_participant
     );
     assert_eq!(
-        Participant::new("Two Do the kung fu".to_string()),
+        Participant {
+            name: "Two Do the kung fu".to_string()
+        },
         set.get(0).unwrap().to_participant
     );
     assert_eq!(None, set.get(0).unwrap().message);

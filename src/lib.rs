@@ -1,5 +1,6 @@
 pub mod parser;
 pub mod rendering;
+pub mod text;
 
 #[macro_use]
 extern crate log;
@@ -8,12 +9,13 @@ use crate::parser::{InteractionParser, InteractionSet};
 use std::str::Lines;
 
 #[derive(Debug)]
-pub struct Diagram(pub InteractionSet);
-
+pub struct Diagram {
+    pub interaction_set: InteractionSet,
+}
 pub fn parse_diagram(lines: Lines) -> Diagram {
-    let interactions = InteractionParser::default().parse_interactions(lines);
+    let interaction_set = InteractionParser::default().parse_interactions(lines);
 
-    Diagram(interactions)
+    Diagram { interaction_set }
 }
 
 pub fn get_text() -> String {
