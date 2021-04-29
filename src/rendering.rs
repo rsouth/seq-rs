@@ -6,7 +6,7 @@ use font_kit::source::SystemSource;
 use itertools::Itertools;
 use raqote::{Color, DrawOptions, DrawTarget, Path, PathBuilder, Point, SolidSource, Source};
 
-use crate::parser::{Interaction, InteractionSet};
+use crate::parser::{Interaction, InteractionSet, Participant};
 use crate::rendering::RenderingConstants::{
     DiagramMargin, DiagramPadding, GapBetweenInteractions, ParticipantHGap, ParticipantHeight,
 };
@@ -181,16 +181,15 @@ fn draw_participant_names(rc: &mut RenderingContext, d: &Diagram) {
     let src = Source::Solid(SolidSource::from(Color::new(200, 25, 100, 30)));
     let draw_options = DrawOptions::default();
 
-    let mut current_pos_x = DiagramPadding.value() + DiagramMargin.value();
+    let mut current_pos_x: i32 = DiagramPadding.value() + DiagramMargin.value();
     d.interaction_set
         .iter()
-        .map(|p| vec![&p.from_participant, &p.to_participant])
+        .map(|p| smallvec::SmallVec::from_buf([&p.from_participant, &p.to_participant]))
         .flatten()
         .unique()
-        .for_each(|p| {
-            let x = current_pos_x;
-            let point = Point::new(x as f32, 50.); // todo y = padding + margin + fontHeight...
-            info!("drawing {} at {}", &p.name, x);
+        .for_each(|p: &Participant| {
+            let point = Point::new(current_pos_x as f32, 50.); // todo y = padding + margin + fontHeight...
+            info!("drawing {} at {}", &p.name, current_pos_x);
 
             rc.draw_target.draw_text(
                 &rc.participant_font,
@@ -201,8 +200,7 @@ fn draw_participant_names(rc: &mut RenderingContext, d: &Diagram) {
                 &draw_options,
             );
 
-            current_pos_x = x
-                + ParticipantHGap.value()
+            current_pos_x += ParticipantHGap.value()
                 + measure_text(&rc.participant_font, rc.theme.participant_font_pt, &p.name)
                     .unwrap()
                     .width();
@@ -230,7 +228,10 @@ pub fn do_render(diagram: &Diagram) {
 
     let start = Instant::now();
     draw_participant_names(&mut rendering_context, diagram);
-    debug!("Created DrawTarget in {}µs", start.elapsed().as_micros());
+    debug!(
+        "Drew participant names in {}µs",
+        start.elapsed().as_micros()
+    );
 
     let start = Instant::now();
     let rpath = rect_path(

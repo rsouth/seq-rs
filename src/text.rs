@@ -1,4 +1,3 @@
-use crate::parser::Interaction;
 use euclid::Point2D;
 use font_kit::canvas::RasterizationOptions;
 use font_kit::font::Font;
@@ -7,16 +6,19 @@ use itertools::Itertools;
 use pathfinder_geometry::transform2d::Transform2F;
 use pathfinder_geometry::vector::vec2f;
 use raqote::Point;
+use smallvec::SmallVec;
+
+use crate::parser::{Interaction, Participant};
 
 // == Text / Font etc =====================================
 
 pub fn measure_strings(font: &Font, font_size: f32, interaction_set: &[Interaction]) -> i32 {
     interaction_set
         .iter()
-        .map(|p| vec![&p.from_participant, &p.to_participant])
+        .map(|p| SmallVec::from_buf([&p.from_participant, &p.to_participant]))
         .flatten()
         .unique()
-        .map(|p| measure_text(font, font_size, &p.name).unwrap().width())
+        .map(|p: &Participant| measure_text(font, font_size, &p.name).unwrap().width())
         .sum()
 }
 

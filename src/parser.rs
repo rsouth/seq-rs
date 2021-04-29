@@ -4,6 +4,7 @@ use std::str::Lines;
 use std::sync::atomic::{AtomicI32, Ordering};
 
 use regex::Regex;
+use std::time::Instant;
 
 pub type ParticSet = HashSet<Participant>;
 
@@ -77,6 +78,7 @@ impl InteractionParser {
 
 impl InteractionParser {
     pub fn parse_interactions(&self, lines: Lines) -> InteractionSet {
+        let start_time = Instant::now();
         let parsed_interactions = lines
             .into_iter()
             .map(|p| p.trim())
@@ -112,7 +114,12 @@ impl InteractionParser {
             })
             .collect::<InteractionSet>();
 
-        debug!("Parsed interactions: {:?}", parsed_interactions);
+        debug!(
+            "Parsed {} interactions in {}µs: {:?}",
+            parsed_interactions.len(),
+            start_time.elapsed().as_micros(),
+            parsed_interactions,
+        );
         parsed_interactions
     }
 }
