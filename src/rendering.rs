@@ -7,7 +7,7 @@ use font_kit::source::SystemSource;
 use itertools::Itertools;
 use raqote::{Color, DrawOptions, DrawTarget, Path, PathBuilder, Point, SolidSource, Source};
 
-use crate::parser::InteractionSet;
+use crate::parser::{Interaction, InteractionSet};
 use crate::rendering::RenderingConstants::{
     DiagramMargin, DiagramPadding, GapBetweenInteractions, ParticipantHGap, ParticipantHeight,
 };
@@ -51,7 +51,7 @@ impl Diagram {
         }
     }
 
-    fn participant_count(interactions: &InteractionSet) -> i32 {
+    fn participant_count(interactions: &[Interaction]) -> i32 {
         let i = interactions
             .iter()
             .map(|p| vec![&p.from_participant, &p.to_participant])
@@ -170,14 +170,14 @@ impl RenderingContext {
 
 fn rect_path(width: i32, height: i32) -> Path {
     let start = Instant::now();
-    let x = DiagramPadding.value() as f32;
-    let y = DiagramPadding.value() as f32;
-    let w = width as f32 - (2. * DiagramPadding.value() as f32);
-    let h = height as f32 - (2. * DiagramPadding.value() as f32);
-    let mut r = PathBuilder::new();
-    r.rect(x, y, w, h);
+    let rect_x = DiagramPadding.value() as f32;
+    let rect_y = DiagramPadding.value() as f32;
+    let rect_w = width as f32 - (2. * DiagramPadding.value() as f32);
+    let rect_h = height as f32 - (2. * DiagramPadding.value() as f32);
+    let mut rect_path = PathBuilder::new();
+    rect_path.rect(rect_x, rect_y, rect_w, rect_h);
 
-    let rpath = r.finish();
+    let rpath = rect_path.finish();
     debug!("Created Rect path in {}µs", start.elapsed().as_micros());
     rpath
 }

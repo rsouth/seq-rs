@@ -1,30 +1,31 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use sequencer::parser::{Interaction, InteractionSet, Participant};
+use sequencer::parser::{Interaction, Participant};
 use sequencer::rendering::*;
 use sequencer::text::{measure_strings, measure_text};
 
 fn measure_measure_strings(c: &mut Criterion) {
-    let mut interaction_set = InteractionSet::new();
-    interaction_set.push(Interaction {
-        from_participant: Participant {
-            name: "One".to_string(),
+    let interaction_set = vec![
+        Interaction {
+            from_participant: Participant {
+                name: "One".to_string(),
+            },
+            to_participant: Participant {
+                name: "Two".to_string(),
+            },
+            message: None,
+            order: 0,
         },
-        to_participant: Participant {
-            name: "Two".to_string(),
+        Interaction {
+            from_participant: Participant {
+                name: "Two".to_string(),
+            },
+            to_participant: Participant {
+                name: "Three".to_string(),
+            },
+            message: None,
+            order: 0,
         },
-        message: None,
-        order: 0,
-    });
-    interaction_set.push(Interaction {
-        from_participant: Participant {
-            name: "Two".to_string(),
-        },
-        to_participant: Participant {
-            name: "Three".to_string(),
-        },
-        message: None,
-        order: 0,
-    });
+    ];
 
     let font = RenderingContext::get_system_font("Arial");
 

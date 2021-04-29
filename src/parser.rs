@@ -43,7 +43,7 @@ impl ParticipantParser {
         let parsed_participants = lines
             .into_iter()
             .map(|p| p.trim())
-            .filter(|p| p.contains("->") && !p.starts_with("#"))
+            .filter(|p| p.contains("->") && !p.starts_with('#'))
             .filter_map(|p| self.partic_regex.captures(p))
             .map(|p| vec![p.index(1).to_string(), p.index(2).to_string()])
             .flatten()
@@ -80,7 +80,7 @@ impl InteractionParser {
         let parsed_interactions = lines
             .into_iter()
             .map(|p| p.trim())
-            .filter(|p| p.contains("->") && !p.starts_with("#"))
+            .filter(|p| p.contains("->") && !p.starts_with('#'))
             .filter_map(|p| self.interaction_regex.captures(p))
             .filter_map(|p| {
                 if p.len() >= 3 {

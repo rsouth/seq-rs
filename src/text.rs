@@ -1,4 +1,4 @@
-use crate::parser::InteractionSet;
+use crate::parser::Interaction;
 use euclid::Point2D;
 use font_kit::canvas::RasterizationOptions;
 use font_kit::font::Font;
@@ -10,7 +10,7 @@ use raqote::Point;
 
 // == Text / Font etc =====================================
 
-pub fn measure_strings(font: &Font, font_size: f32, interaction_set: &InteractionSet) -> i32 {
+pub fn measure_strings(font: &Font, font_size: f32, interaction_set: &[Interaction]) -> i32 {
     interaction_set
         .iter()
         .map(|p| vec![&p.from_participant, &p.to_participant])
