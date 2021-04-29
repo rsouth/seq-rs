@@ -1,4 +1,4 @@
-use crate::Diagram;
+use crate::parser::InteractionSet;
 use euclid::Point2D;
 use font_kit::canvas::RasterizationOptions;
 use font_kit::font::Font;
@@ -10,9 +10,8 @@ use raqote::Point;
 
 // == Text / Font etc =====================================
 
-pub fn measure_strings(font: &Font, font_size: f32, diagram: &Diagram) -> i32 {
-    diagram
-        .interaction_set
+pub fn measure_strings(font: &Font, font_size: f32, interaction_set: &InteractionSet) -> i32 {
+    interaction_set
         .iter()
         .map(|p| vec![&p.from_participant, &p.to_participant])
         .flatten()
@@ -45,12 +44,12 @@ pub fn measure_glyphs(
     glyphs: impl IntoIterator<Item = (u32, Point)>,
 ) -> Result<euclid::Rect<i32, euclid::UnknownUnit>, font_kit::error::GlyphLoadingError> {
     let mut combined_bounds = euclid::Rect::zero();
+    let tfm = Transform2F::default();
     for (id, position) in glyphs.into_iter() {
         let bounds = font.raster_bounds(
             id,
             point_size,
-            // tform,
-            Transform2F::default().translate(vec2f(position.x, position.y)),
+            tfm.translate(vec2f(position.x, position.y)),
             HintingOptions::None,
             RasterizationOptions::SubpixelAa,
         );

@@ -7,7 +7,7 @@ use sequencer::Diagram;
 fn measure_text_single_char(c: &mut Criterion) {
     let font = RenderingContext::get_system_font("Arial");
     c.bench_function("measure_text single", |b| {
-        b.iter(|| measure_text(&font, 20., "A"))
+        b.iter(|| measure_text(black_box(&font), black_box(20.), black_box("A")))
     });
 }
 
@@ -22,9 +22,9 @@ fn measure_calculate_diagram_height(c: &mut Criterion) {
         message: None,
         order: 0,
     }];
-    let diagram: Diagram = Diagram { interaction_set: p };
+    let diagram: Diagram = Diagram::new(p);
     c.bench_function("calculate_diagram_height", |b| {
-        b.iter(|| diagram.calculate_diagram_height())
+        b.iter(|| RenderingContext::calculate_diagram_height(black_box(&diagram)));
     });
 }
 
@@ -39,10 +39,16 @@ fn measure_calculate_diagram_width(c: &mut Criterion) {
         message: None,
         order: 0,
     }];
-    let diagram: Diagram = Diagram { interaction_set: p };
+    let diagram: Diagram = Diagram::new(p);
     let font = &RenderingContext::get_system_font("Arial");
     c.bench_function("calculate_diagram_width", |b| {
-        b.iter(|| diagram.calculate_diagram_width(black_box(font), black_box(40.)))
+        b.iter(|| {
+            RenderingContext::calculate_diagram_width(
+                black_box(&diagram),
+                black_box(&font),
+                black_box(40.),
+            )
+        })
     });
 }
 

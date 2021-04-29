@@ -2,7 +2,6 @@ use std::collections::HashSet;
 use std::ops::Index;
 use std::str::Lines;
 use std::sync::atomic::{AtomicI32, Ordering};
-use std::time::Instant;
 
 use regex::Regex;
 

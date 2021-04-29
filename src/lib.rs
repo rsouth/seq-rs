@@ -10,12 +10,14 @@ use std::str::Lines;
 
 #[derive(Debug)]
 pub struct Diagram {
+    pub unique_participants: i32,
     pub interaction_set: InteractionSet,
 }
+
 pub fn parse_diagram(lines: Lines) -> Diagram {
     let interaction_set = InteractionParser::default().parse_interactions(lines);
 
-    Diagram { interaction_set }
+    Diagram::new(interaction_set)
 }
 
 pub fn get_text() -> String {

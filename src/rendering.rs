@@ -7,6 +7,7 @@ use font_kit::source::SystemSource;
 use itertools::Itertools;
 use raqote::{Color, DrawOptions, DrawTarget, Path, PathBuilder, Point, SolidSource, Source};
 
+use crate::parser::InteractionSet;
 use crate::rendering::RenderingConstants::{
     DiagramMargin, DiagramPadding, GapBetweenInteractions, ParticipantHGap, ParticipantHeight,
 };
@@ -42,30 +43,27 @@ impl RenderingConstants {
 
 // == Diagram =============================================
 impl Diagram {
-    pub fn calculate_diagram_height(&self) -> i32 {
-        let interaction_count = self.interaction_set.len() as i32;
-        let height = (DiagramPadding.value() * 2)
-            + (DiagramMargin.value() * 2)
-            + ParticipantHeight.value()
-            + (interaction_count * GapBetweenInteractions.value());
-        debug!("Calculated height {}", height);
-        height
+    pub fn new(interaction_set: InteractionSet) -> Self {
+        let unique_participants = Diagram::participant_count(&interaction_set);
+        Diagram {
+            unique_participants,
+            interaction_set,
+        }
     }
 
-    // todo doesn't calculate the width added by interaction messages etc
-    pub fn calculate_diagram_width(&self, font: &Font, participant_font_size: f32) -> i32 {
-        let partic_width = measure_strings(font, participant_font_size, self);
-        let width = (DiagramPadding.value() * 2)
-            + (DiagramMargin.value() * 2)
-            + partic_width
-            + (participant_count(self) * ParticipantHGap.value());
-        debug!("Calculated width {}", width);
-        width
+    fn participant_count(interactions: &InteractionSet) -> i32 {
+        let i = interactions
+            .iter()
+            .map(|p| vec![&p.from_participant, &p.to_participant])
+            .flatten()
+            .unique()
+            .count() as i32;
+        debug!("Unique participant count: {}", i);
+        i as i32
     }
 }
 
 // == Rendering Context ===================================
-
 pub struct RenderingContext {
     diagram_width: i32,
     diagram_height: i32,
@@ -84,9 +82,17 @@ impl RenderingContext {
             RenderingContext::get_system_font(theme.participant_font_family.as_str());
 
         // calculate diagram size
-        let diagram_height = diagram.calculate_diagram_height();
-        let diagram_width =
-            diagram.calculate_diagram_width(&participant_font, theme.participant_font_pt);
+        let diagram_height = RenderingContext::calculate_diagram_height(diagram);
+        let diagram_width = RenderingContext::calculate_diagram_width(
+            diagram,
+            &participant_font,
+            theme.participant_font_pt,
+        );
+        RenderingContext::calculate_diagram_width(
+            diagram,
+            &participant_font,
+            theme.participant_font_pt,
+        );
 
         // create canvas
         let draw_target = DrawTarget::new(diagram_width, diagram_height);
@@ -102,6 +108,31 @@ impl RenderingContext {
             _title_font,
             participant_font,
         }
+    }
+
+    pub fn calculate_diagram_height(diagram: &Diagram) -> i32 {
+        let interaction_count = diagram.interaction_set.len() as i32;
+        let height = (DiagramPadding.value() * 2)
+            + (DiagramMargin.value() * 2)
+            + ParticipantHeight.value()
+            + (interaction_count * GapBetweenInteractions.value());
+        debug!("Calculated height {}", height);
+        height
+    }
+
+    // todo doesn't calculate the width added by interaction messages etc
+    pub fn calculate_diagram_width(
+        diagram: &Diagram,
+        font: &Font,
+        participant_font_size: f32,
+    ) -> i32 {
+        let partic_width = measure_strings(font, participant_font_size, &diagram.interaction_set);
+        let width = (DiagramPadding.value() * 2)
+            + (DiagramMargin.value() * 2)
+            + partic_width
+            + (diagram.unique_participants * ParticipantHGap.value());
+        debug!("Calculated width {}", width);
+        width
     }
 
     #[allow(dead_code)]
@@ -135,18 +166,6 @@ impl RenderingContext {
         );
         font
     }
-}
-
-fn participant_count(diagram: &Diagram) -> i32 {
-    let i = diagram
-        .interaction_set
-        .iter()
-        .map(|p| vec![&p.from_participant, &p.to_participant])
-        .flatten()
-        .unique()
-        .count() as i32;
-    debug!("Unique participant count: {}", i);
-    i as i32
 }
 
 fn rect_path(width: i32, height: i32) -> Path {

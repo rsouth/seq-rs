@@ -33,3 +33,8 @@ harness = false
 [[bench]]
 name = "renderer_benchmarks"
 harness = false
+
+[[bench]]
+name = "text_benchmarks"
+harness = false
+
