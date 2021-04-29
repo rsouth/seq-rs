@@ -1,7 +1,6 @@
 use std::time::Instant;
 
 use font_kit::family_name::FamilyName;
-use font_kit::loaders::directwrite::Font;
 use font_kit::properties::{Properties, Weight};
 use font_kit::source::SystemSource;
 use itertools::Itertools;
@@ -13,6 +12,7 @@ use crate::rendering::RenderingConstants::{
 };
 use crate::text::{measure_strings, measure_text};
 use crate::Diagram;
+use font_kit::font::Font;
 use std::sync::Arc;
 
 // todo replace any rendered chars in the input text which don't have a glyph in the font with another char
