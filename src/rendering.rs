@@ -88,11 +88,6 @@ impl RenderingContext {
             &participant_font,
             theme.participant_font_pt,
         );
-        RenderingContext::calculate_diagram_width(
-            diagram,
-            &participant_font,
-            theme.participant_font_pt,
-        );
 
         // create canvas
         let draw_target = DrawTarget::new(diagram_width, diagram_height);
@@ -136,7 +131,7 @@ impl RenderingContext {
     }
 
     #[allow(dead_code)]
-    fn get_font() -> Font {
+    pub fn get_font() -> Font {
         let start = Instant::now();
         let font_data: &[u8] = include_bytes!("../assets/Roboto-Black.ttf");
         let font = Font::from_bytes(Arc::new(font_data.to_vec()), 0).unwrap();

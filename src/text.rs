@@ -70,7 +70,7 @@ pub fn measure_glyphs(
 fn test_measure_text() {
     use crate::rendering::RenderingContext;
 
-    let font = RenderingContext::get_system_font("Arial");
+    let font = RenderingContext::get_font();
     let result = measure_text(&font, 20., "A");
     print!("{:?}", result);
     let result = measure_text(&font, 20., "AA");
