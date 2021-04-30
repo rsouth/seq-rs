@@ -4,15 +4,13 @@ extern crate pretty_env_logger;
 
 use std::time::Instant;
 
-use sequencer::parser::{InteractionParser, ParticipantParser};
+use sequencer::parser::InteractionParser;
 use sequencer::{get_text, parse_diagram};
 
 fn main() {
     pretty_env_logger::init();
 
     let instant = Instant::now();
-
-    // use_participant_parser();
 
     // use_interaction_parser();
 
@@ -33,11 +31,4 @@ fn use_interaction_parser() {
     let interaction_parser = InteractionParser::default();
     let interactions = interaction_parser.parse_interactions(get_text().lines());
     debug!("Got interactions: {:?}", interactions);
-}
-
-#[allow(dead_code)]
-fn use_participant_parser() {
-    let parser = ParticipantParser::default();
-    let set = parser.parse_participants(get_text().lines());
-    debug!("Got participants: {:?}", set);
 }

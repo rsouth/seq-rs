@@ -1,6 +1,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+
 use sequencer::parser::{Interaction, InteractionSet, Participant};
-use sequencer::rendering::*;
+use sequencer::render_context::RenderingContext;
+use sequencer::rendering::do_render;
 use sequencer::text::measure_text;
 use sequencer::Diagram;
 
@@ -52,10 +54,28 @@ fn measure_calculate_diagram_width(c: &mut Criterion) {
     });
 }
 
+fn measure_draw_partic_names(c: &mut Criterion) {
+    let p: InteractionSet = vec![Interaction {
+        from_participant: Participant {
+            name: "One".to_string(),
+        },
+        to_participant: Participant {
+            name: "Two".to_string(),
+        },
+        message: None,
+        order: 0,
+    }];
+    let diagram: Diagram = Diagram::new(p);
+    c.bench_function("measure_draw_partic_names", |b| {
+        b.iter(|| do_render(black_box(&diagram)))
+    });
+}
+
 criterion_group!(
     benches,
-    measure_text_single_char,
-    measure_calculate_diagram_height,
-    measure_calculate_diagram_width
+    // measure_text_single_char,
+    // measure_calculate_diagram_height,
+    // measure_calculate_diagram_width
+    measure_draw_partic_names
 );
 criterion_main!(benches);

@@ -70,15 +70,15 @@ pub fn measure_glyphs(
 
 #[test]
 fn test_measure_text() {
-    use crate::rendering::RenderingContext;
+    use crate::render_context::RenderingContext;
+    // just testing using 'known good' values incase measuring itself gets broken
 
     let font = RenderingContext::get_font();
     let result = measure_text(&font, 20., "A");
-    print!("{:?}", result);
+    assert_eq!(15, result.unwrap().width());
+    assert_eq!(14, result.unwrap().height());
+
     let result = measure_text(&font, 20., "AA");
-    print!("{:?}", result);
-    let result = measure_text(&font, 20., "AAA");
-    print!("{:?}", result);
-    let result = measure_text(&font, 20., "AAAA");
-    print!("{:?}", result);
+    assert_eq!(28, result.unwrap().width());
+    assert_eq!(14, result.unwrap().height());
 }

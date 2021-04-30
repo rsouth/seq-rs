@@ -1,5 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use sequencer::parser::{InteractionParser, ParticipantParser};
+
+use sequencer::parser::InteractionParser;
 
 pub fn get_text() -> String {
     String::from(
@@ -19,13 +20,6 @@ pub fn get_text() -> String {
     )
 }
 
-fn participant_parser_benchmark_multiline(c: &mut Criterion) {
-    let parser = ParticipantParser::default();
-    c.bench_function("parser_participants multiline", |b| {
-        b.iter(|| parser.parse_participants(black_box(get_text().lines())))
-    });
-}
-
 fn interaction_parser_benchmark_multiline(c: &mut Criterion) {
     let parser = InteractionParser::default();
     c.bench_function("interaction_parser multiline", |b| {
@@ -33,9 +27,5 @@ fn interaction_parser_benchmark_multiline(c: &mut Criterion) {
     });
 }
 
-criterion_group!(
-    benches,
-    participant_parser_benchmark_multiline,
-    interaction_parser_benchmark_multiline
-);
+criterion_group!(benches, interaction_parser_benchmark_multiline);
 criterion_main!(benches);

@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 use std::ops::Index;
 use std::str::Lines;
-use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::time::Instant;
 
 use regex::Regex;
-use std::time::Instant;
 
 pub type ParticSet = HashSet<Participant>;
 
@@ -26,53 +26,24 @@ pub struct Interaction {
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Clone)]
 pub struct Message(String);
 
-// == Participant Parser ==================================
-pub struct ParticipantParser {
-    partic_regex: Regex,
-}
-
-impl Default for ParticipantParser {
-    fn default() -> Self {
-        ParticipantParser {
-            partic_regex: regex::Regex::new("^(\\w*) -+>+ (\\w*):?.*$").unwrap(),
-        }
-    }
-}
-
-impl ParticipantParser {
-    pub fn parse_participants(&self, lines: Lines) -> ParticSet {
-        let parsed_participants = lines
-            .into_iter()
-            .map(|p| p.trim())
-            .filter(|p| p.contains("->") && !p.starts_with('#'))
-            .filter_map(|p| self.partic_regex.captures(p))
-            .map(|p| vec![p.index(1).to_string(), p.index(2).to_string()])
-            .flatten()
-            .map(|p| Participant { name: p })
-            .collect::<ParticSet>();
-        debug!("Parsed participants: {:?}", parsed_participants);
-        parsed_participants
-    }
-}
-
 // == Interaction Parser ==================================
 pub struct InteractionParser {
     interaction_regex: Regex,
-    counter: AtomicI32,
+    counter: AtomicU32,
 }
 
 impl Default for InteractionParser {
     fn default() -> Self {
         InteractionParser {
             interaction_regex: regex::Regex::new("^(.+)(\\s+-+>+\\s+)([^:]+):?(.*)$").unwrap(),
-            counter: AtomicI32::default(),
+            counter: AtomicU32::new(0),
         }
     }
 }
 
 impl InteractionParser {
     fn get_incr(&self) -> u32 {
-        self.counter.fetch_add(1, Ordering::Relaxed).unsigned_abs()
+        self.counter.fetch_add(1, Ordering::Relaxed)
     }
 }
 
@@ -92,12 +63,8 @@ impl InteractionParser {
                     let to_participant = Participant {
                         name: p.index(3).trim().to_string(),
                     };
-                    let message = if p.len() > 3 {
-                        if p.index(4).trim().is_empty() {
-                            None
-                        } else {
-                            Some(Message(p.index(4).trim().to_string()))
-                        }
+                    let message = if p.len() == 5 && !p.index(4).trim().is_empty() {
+                        Some(Message(p.index(4).trim().to_string()))
                     } else {
                         None
                     };
@@ -186,46 +153,4 @@ fn test_parse_interactions() {
     );
     assert_eq!(None, set.get(0).unwrap().message);
     println!("Set is: {:?}", set);
-}
-
-#[test]
-fn test_parse_participants() {
-    let parser = ParticipantParser::default();
-
-    // happy path
-    let set = parser.parse_participants("One -> Two".lines());
-    println!("Partics: {:?}", set);
-    assert_eq!(2, set.len());
-
-    //
-    let set = parser.parse_participants("One -> Two\nFour ->\nThree -> One\nSeven".lines());
-    println!("Partics: {:?}", set);
-    assert_eq!(3, set.len());
-    assert!(set.contains(&Participant {
-        name: "One".to_string()
-    }));
-    assert!(set.contains(&Participant {
-        name: "Two".to_string()
-    }));
-    assert!(set.contains(&Participant {
-        name: "Three".to_string()
-    }));
-
-    //
-    let set =
-        parser.parse_participants("One -> Two\n # Comment -> No Parsing \nFour -> Three".lines());
-    println!("Partics: {:?}", set);
-    assert_eq!(4, set.len());
-    assert!(set.contains(&Participant {
-        name: "One".to_string()
-    }));
-    assert!(set.contains(&Participant {
-        name: "Two".to_string()
-    }));
-    assert!(set.contains(&Participant {
-        name: "Three".to_string()
-    }));
-    assert!(set.contains(&Participant {
-        name: "Four".to_string()
-    }));
 }

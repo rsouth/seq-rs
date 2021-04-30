@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use sequencer::parser::{Interaction, Participant};
-use sequencer::rendering::*;
+use sequencer::render_context::RenderingContext;
 use sequencer::text::{measure_strings, measure_text};
 
 fn measure_measure_strings(c: &mut Criterion) {

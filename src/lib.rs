@@ -1,4 +1,5 @@
 pub mod parser;
+pub mod render_context;
 pub mod rendering;
 pub mod text;
 
