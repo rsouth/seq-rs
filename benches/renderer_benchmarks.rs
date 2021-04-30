@@ -73,9 +73,9 @@ fn measure_draw_partic_names(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    // measure_text_single_char,
-    // measure_calculate_diagram_height,
-    // measure_calculate_diagram_width
+    measure_text_single_char,
+    measure_calculate_diagram_height,
+    measure_calculate_diagram_width
     measure_draw_partic_names
 );
 criterion_main!(benches);
