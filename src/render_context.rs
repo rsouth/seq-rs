@@ -1,7 +1,7 @@
 use crate::render_context::RenderingConstants::{
     DiagramMargin, DiagramPadding, GapBetweenInteractions, ParticipantHGap, ParticipantHeight,
+    ParticipantPadding,
 };
-use crate::rendering::Theme;
 use crate::text::measure_strings;
 use crate::Diagram;
 use font_kit::family_name::FamilyName;
@@ -16,7 +16,6 @@ use std::time::Instant;
 pub struct RenderingContext {
     pub(crate) diagram_width: i32,
     pub(crate) diagram_height: i32,
-    pub(crate) theme: Theme,
     pub(crate) draw_target: DrawTarget,
     //
     _title_font: Font,
@@ -24,7 +23,8 @@ pub struct RenderingContext {
 }
 
 impl RenderingContext {
-    pub fn new(diagram: &Diagram, theme: Theme) -> Self {
+    pub fn new(diagram: &Diagram) -> Self {
+        let theme = &diagram.theme;
         // load fonts
         let _title_font = RenderingContext::get_system_font(theme.title_font_family.as_str());
         let participant_font =
@@ -47,7 +47,6 @@ impl RenderingContext {
         RenderingContext {
             diagram_width,
             diagram_height,
-            theme,
             draw_target,
             _title_font,
             participant_font,
@@ -74,7 +73,8 @@ impl RenderingContext {
         let width = (DiagramPadding.value() * 2)
             + (DiagramMargin.value() * 2)
             + partic_width
-            + (diagram.unique_participants * ParticipantHGap.value());
+            + ((diagram.unique_participants - 1) * ParticipantHGap.value())
+            + (diagram.unique_participants * (ParticipantPadding.value() * 2));
         debug!("Calculated width {}", width);
         width
     }
@@ -120,6 +120,7 @@ pub enum RenderingConstants {
     // Participant
     ParticipantHeight,
     ParticipantHGap,
+    ParticipantPadding,
 
     // Interactions
     GapBetweenInteractions,
@@ -128,10 +129,11 @@ pub enum RenderingConstants {
 impl RenderingConstants {
     pub(crate) fn value(&self) -> i32 {
         match *self {
-            RenderingConstants::DiagramPadding => 25,
+            RenderingConstants::DiagramPadding => 10,
             RenderingConstants::DiagramMargin => 15,
             RenderingConstants::ParticipantHeight => 50,
-            RenderingConstants::ParticipantHGap => 20,
+            RenderingConstants::ParticipantHGap => 25,
+            RenderingConstants::ParticipantPadding => 10,
             RenderingConstants::GapBetweenInteractions => 50,
         }
     }

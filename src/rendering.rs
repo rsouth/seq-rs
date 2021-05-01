@@ -1,10 +1,12 @@
 use std::time::Instant;
 
 use itertools::Itertools;
-use raqote::{Color, DrawOptions, Path, PathBuilder, Point, SolidSource, Source};
+use raqote::{Color, DrawOptions, Path, PathBuilder, Point, SolidSource, Source, StrokeStyle};
 
 use crate::parser::{Interaction, InteractionSet, Participant};
-use crate::render_context::RenderingConstants::{DiagramMargin, DiagramPadding, ParticipantHGap};
+use crate::render_context::RenderingConstants::{
+    DiagramMargin, DiagramPadding, ParticipantHGap, ParticipantHeight, ParticipantPadding,
+};
 use crate::render_context::RenderingContext;
 use crate::text::measure_text;
 use crate::Diagram;
@@ -13,9 +15,10 @@ use crate::Diagram;
 
 // == Diagram =============================================
 impl Diagram {
-    pub fn new(interaction_set: InteractionSet) -> Self {
+    pub fn new(theme: Theme, interaction_set: InteractionSet) -> Self {
         let unique_participants = Diagram::participant_count(&interaction_set);
         Diagram {
+            theme,
             unique_participants,
             interaction_set,
         }
@@ -47,10 +50,41 @@ fn rect_path(width: i32, height: i32) -> Path {
     rpath
 }
 
+fn draw_participant_rectangles(rc: &mut RenderingContext, d: &Diagram) {
+    let mut rect_path = PathBuilder::new();
+    let mut x_pos = DiagramPadding.value() + DiagramMargin.value();
+    let y_pos = DiagramPadding.value() + DiagramMargin.value();
+    d.interaction_set
+        .iter()
+        .map(|p| smallvec::SmallVec::from_buf([&p.from_participant, &p.to_participant]))
+        .flatten()
+        .unique()
+        .for_each(|p: &Participant| {
+            let rect =
+                measure_text(&rc.participant_font, d.theme.participant_font_pt, &p.name).unwrap();
+            rect_path.rect(
+                x_pos as f32,
+                y_pos as f32,
+                rect.width() as f32 + 20 as f32,
+                ParticipantHeight.value() as f32, //rect.height() as f32 + 20 as f32,
+            );
+
+            x_pos += rect.width() + 20 + ParticipantHGap.value();
+        });
+
+    let mut stroke = StrokeStyle::default();
+    stroke.width = 2.;
+    let color = Source::Solid(SolidSource::from_unpremultiplied_argb(255, 100, 200, 100));
+    rc.draw_target
+        .stroke(&rect_path.finish(), &color, &stroke, &DrawOptions::new());
+}
+
 fn draw_participant_names(rc: &mut RenderingContext, d: &Diagram) {
     let src = Source::Solid(SolidSource::from(Color::new(255, 0, 0, 0)));
     let draw_options = DrawOptions::default();
 
+    let font_height = measure_text(&rc.participant_font, d.theme.participant_font_pt, "A");
+    let y_position = DiagramPadding.value() + DiagramMargin.value(); // + font_height.unwrap().height();
     let mut current_pos_x: i32 = DiagramPadding.value() + DiagramMargin.value();
     d.interaction_set
         .iter()
@@ -58,41 +92,60 @@ fn draw_participant_names(rc: &mut RenderingContext, d: &Diagram) {
         .flatten()
         .unique()
         .for_each(|p: &Participant| {
-            let point = Point::new(current_pos_x as f32, 50.); // todo y = padding + margin + fontHeight...
+            let partic_measure =
+                measure_text(&rc.participant_font, d.theme.participant_font_pt, &p.name).unwrap();
+            let point = Point::new(
+                (current_pos_x + ParticipantPadding.value()) as f32,
+                y_position as f32
+                    + ParticipantPadding.value() as f32
+                    + font_height.unwrap().height() as f32,
+            ); // todo y = padding + margin + fontHeight...
             info!("drawing {} at {}", &p.name, current_pos_x);
 
             rc.draw_target.draw_text(
                 &rc.participant_font,
-                rc.theme.participant_font_pt,
+                d.theme.participant_font_pt,
                 &p.name,
                 point,
                 &src,
                 &draw_options,
             );
 
-            current_pos_x += ParticipantHGap.value()
-                + measure_text(&rc.participant_font, rc.theme.participant_font_pt, &p.name)
-                    .unwrap()
-                    .width();
+            current_pos_x +=
+                (ParticipantPadding.value() * 2) + ParticipantHGap.value() + partic_measure.width();
         });
 }
 
+struct RenderableParticipant {
+    participant: Participant,
+    width: u32,
+    height: u32,
+    x: u32,
+    y: u32,
+}
+
+#[derive(Debug)]
 pub struct Theme {
     pub(crate) title_font_family: String,
-    _title_font_pt: f32,
+    pub(crate) _title_font_pt: f32,
 
     pub(crate) participant_font_family: String,
     pub(crate) participant_font_pt: f32,
 }
 
+impl Default for Theme {
+    fn default() -> Self {
+        Theme {
+            title_font_family: "Arial".to_string(),
+            _title_font_pt: 54.0,
+            participant_font_family: "Arial".to_string(),
+            participant_font_pt: 40.0,
+        }
+    }
+}
+
 pub fn do_render(diagram: &Diagram) {
-    let theme = Theme {
-        title_font_family: "Arial".to_string(),
-        _title_font_pt: 40.,
-        participant_font_family: "Arial".to_string(),
-        participant_font_pt: 20.,
-    };
-    let mut rendering_context = RenderingContext::new(&diagram, theme);
+    let mut rendering_context = RenderingContext::new(&diagram);
 
     let options = DrawOptions::default();
 
@@ -118,6 +171,8 @@ pub fn do_render(diagram: &Diagram) {
         "Drew participant names in {}µs",
         start.elapsed().as_micros()
     );
+
+    draw_participant_rectangles(&mut rendering_context, diagram);
 
     let start = Instant::now();
     rendering_context

@@ -2,7 +2,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use sequencer::parser::{Interaction, InteractionSet, Participant};
 use sequencer::render_context::RenderingContext;
-use sequencer::rendering::do_render;
+use sequencer::rendering::{do_render, Theme};
 use sequencer::text::measure_text;
 use sequencer::Diagram;
 
@@ -24,7 +24,7 @@ fn measure_calculate_diagram_height(c: &mut Criterion) {
         message: None,
         order: 0,
     }];
-    let diagram: Diagram = Diagram::new(p);
+    let diagram: Diagram = Diagram::new(Theme::default(), p);
     c.bench_function("calculate_diagram_height", |b| {
         b.iter(|| RenderingContext::calculate_diagram_height(black_box(&diagram)));
     });
@@ -41,7 +41,7 @@ fn measure_calculate_diagram_width(c: &mut Criterion) {
         message: None,
         order: 0,
     }];
-    let diagram: Diagram = Diagram::new(p);
+    let diagram: Diagram = Diagram::new(Theme::default(), p);
     let font = &RenderingContext::get_system_font("Arial");
     c.bench_function("calculate_diagram_width", |b| {
         b.iter(|| {
@@ -55,7 +55,7 @@ fn measure_calculate_diagram_width(c: &mut Criterion) {
 }
 
 fn measure_draw_partic_names(c: &mut Criterion) {
-    let p: InteractionSet = vec![Interaction {
+    let interaction_set: InteractionSet = vec![Interaction {
         from_participant: Participant {
             name: "One".to_string(),
         },
@@ -65,7 +65,8 @@ fn measure_draw_partic_names(c: &mut Criterion) {
         message: None,
         order: 0,
     }];
-    let diagram: Diagram = Diagram::new(p);
+    let theme = Theme::default();
+    let diagram: Diagram = Diagram::new(theme, interaction_set);
     c.bench_function("measure_draw_partic_names", |b| {
         b.iter(|| do_render(black_box(&diagram)))
     });
@@ -75,7 +76,7 @@ criterion_group!(
     benches,
     measure_text_single_char,
     measure_calculate_diagram_height,
-    measure_calculate_diagram_width
+    measure_calculate_diagram_width,
     measure_draw_partic_names
 );
 criterion_main!(benches);

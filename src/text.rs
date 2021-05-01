@@ -13,13 +13,20 @@ use crate::parser::{Interaction, Participant};
 // == Text / Font etc =====================================
 
 pub fn measure_strings(font: &Font, font_size: f32, interaction_set: &[Interaction]) -> i32 {
-    interaction_set
+    let sum_of_width = interaction_set
         .iter()
         .map(|p| SmallVec::from_buf([&p.from_participant, &p.to_participant]))
         .flatten()
         .unique()
-        .map(|p: &Participant| measure_text(font, font_size, &p.name).unwrap().width())
-        .sum()
+        .map(|p: &Participant| {
+            let width = measure_text(font, font_size, &p.name).unwrap().width();
+            debug!("Width of {} is {}", &p.name, width);
+            width
+        })
+        .sum();
+
+    debug!("Full participant width {}", sum_of_width);
+    sum_of_width
 }
 
 pub fn measure_text(
