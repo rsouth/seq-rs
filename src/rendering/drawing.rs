@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use euclid::{Rect, Size2D, UnknownUnit};
-use pathfinder_geometry::rect::RectF;
-use pathfinder_geometry::vector::Vector2F;
 use raqote::{DrawOptions, PathBuilder, Point, Source, StrokeStyle};
 
 use crate::rendering::render_context::RenderingConstants::{
@@ -50,6 +47,7 @@ impl DrawingMetrics {
 // == Participant =========================================
 impl Draw for ParticipantSet {
     fn draw(&self, rc: &mut RenderingContext, dm: &DrawingMetrics) -> DrawResult {
+        let start_partic_set = Instant::now();
         // for text
         let font_color = Source::Solid(rc.theme.solid_black_source);
         let participant_box_height = (ParticipantPadding.value() * 2.0)
@@ -65,7 +63,14 @@ impl Draw for ParticipantSet {
         let mut rect_path = PathBuilder::new();
         let mut activation_box_path = PathBuilder::new();
 
+        trace!(
+            "Setup Draw for ParticipantSet in {}us",
+            start_partic_set.elapsed().as_micros()
+        );
+        let start_loop = Instant::now();
+
         self.iter().for_each(|p: &Participant| {
+            let start = Instant::now();
             let partic_string_width = dm.get_w(&p.name);
 
             // == Participant Boxes ==
@@ -75,8 +80,14 @@ impl Draw for ParticipantSet {
                 partic_string_width + (2_f32 * ParticipantPadding.value()),
                 participant_box_height,
             );
+            trace!(
+                "Created {} participant rect in {}us",
+                &p.name,
+                start.elapsed().as_micros()
+            );
 
             // == NAMES ==
+            let start = Instant::now();
             let point = Point::new(
                 x_position + ParticipantPadding.value(),
                 y_position
@@ -92,8 +103,15 @@ impl Draw for ParticipantSet {
                 &font_color,
                 &rc.theme.default_draw_options,
             );
+            trace!(
+                "Drew {} text in {}us ({}ms)",
+                &p.name,
+                start.elapsed().as_micros(),
+                start.elapsed().as_millis()
+            );
 
             // == Lifeline ==
+            let start = Instant::now();
             rect_path.move_to(
                 x_position + (partic_string_width / 2.0) as f32 + ParticipantPadding.value(),
                 y_position + participant_box_height as f32,
@@ -102,14 +120,16 @@ impl Draw for ParticipantSet {
                 x_position + (partic_string_width / 2.0) as f32 + ParticipantPadding.value(),
                 rc.diagram_height as f32 - y_position,
             );
+            trace!(
+                "Created lifeline for {} in {}us",
+                &p.name,
+                start.elapsed().as_micros()
+            );
 
             // == Activation Box
-            debug!(
-                "Activation Box for {} active from {} to {}",
-                p.name, p.active_from, p.active_until
-            );
+            let start = Instant::now();
             activation_box_path.rect(
-                x_position + (partic_string_width / 2.0) as f32 + 5.0,
+                x_position + (partic_string_width / 2.0) + 5.0,
                 y_position
                     + ParticipantPadding.value()
                     + participant_box_height
@@ -119,12 +139,27 @@ impl Draw for ParticipantSet {
                     + ((p.active_until as f32 - p.active_from as f32) - 1.0)
                         * GapBetweenInteractions.value(),
             );
+            debug!(
+                "Activation Box for {} active from {} to {}",
+                &p.name, p.active_from, p.active_until
+            );
+            trace!(
+                "Created activation box for {} in {}us",
+                &p.name,
+                start.elapsed().as_micros()
+            );
 
             // update X positions for next participant...
             x_position += partic_string_width
                 + (ParticipantPadding.value() * 2_f32)
                 + ParticipantHGap.value();
         });
+
+        trace!(
+            "Completed Draw for ParticipantSet loop in {}us ({}ms)",
+            start_loop.elapsed().as_micros(),
+            start_loop.elapsed().as_millis()
+        );
 
         // draw
         rc.draw_target.stroke(
@@ -145,6 +180,12 @@ impl Draw for ParticipantSet {
             &Source::Solid(rc.theme.solid_dgrey_source),
             &rc.theme.default_stroke_style,
             &rc.theme.default_draw_options,
+        );
+
+        trace!(
+            "Completed Draw for ParticipantSet in {}us ({}ms)",
+            start_partic_set.elapsed().as_micros(),
+            start_partic_set.elapsed().as_millis()
         );
 
         Ok(())
@@ -219,25 +260,24 @@ impl Draw for InteractionSet {
     }
 }
 
-pub type TextSize = Size2D<f32, UnknownUnit>;
-
 // == Diagram =============================================
 impl Diagram {
     pub fn draw(&mut self) -> DrawResult {
-        let start = Instant::now();
-
         // Background rectangle
         let rpath = rect_path(
             self.rendering_context.diagram_width,
             self.rendering_context.diagram_height,
         );
+
+        //
+        let start = Instant::now();
         self.rendering_context.draw_target.fill(
             &rpath,
             &Source::Solid(self.rendering_context.theme.solid_red_source),
             &self.rendering_context.theme.default_draw_options,
         );
-        debug!(
-            "Filled background rect in {}µs ({}ms)",
+        trace!(
+            "Drew background rect in {}µs ({}ms)",
             start.elapsed().as_micros(),
             start.elapsed().as_millis()
         );
@@ -261,6 +301,7 @@ impl Diagram {
     }
 
     fn precalculate_x(&self, rc: &RenderingContext) -> DrawingMetrics {
+        let start = Instant::now();
         let mut x_position: f32 = DiagramPadding.value() + DiagramMargin.value();
         let mut dm = DrawingMetrics::default();
         self.participants.iter().for_each(|p: &Participant| {
@@ -273,6 +314,11 @@ impl Diagram {
                 + (ParticipantPadding.value() * 2_f32)
                 + ParticipantHGap.value();
         });
+        trace!(
+            "Pre-calc x values in {}µs ({}ms)",
+            start.elapsed().as_micros(),
+            start.elapsed().as_millis()
+        );
 
         dm
     }

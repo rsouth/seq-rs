@@ -12,6 +12,10 @@ pub fn rect_path(width: i32, height: i32) -> Path {
     rect_path.rect(rect_x, rect_y, rect_w, rect_h);
 
     let rpath = rect_path.finish();
-    debug!("Created Rect path in {}µs", start.elapsed().as_micros());
+    trace!(
+        "Created rectangle path in {}µs - {:?}",
+        start.elapsed().as_micros(),
+        &rpath.ops.to_vec()
+    );
     rpath
 }

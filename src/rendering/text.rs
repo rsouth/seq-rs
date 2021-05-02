@@ -1,16 +1,14 @@
-use euclid::{Point2D, UnknownUnit};
+use euclid::Point2D;
 use font_kit::canvas::RasterizationOptions;
 use font_kit::font::Font;
 use font_kit::hinting::HintingOptions;
 use itertools::Itertools;
 use pathfinder_geometry::transform2d::Transform2F;
-use pathfinder_geometry::vector::{vec2f, Vector2F};
+use pathfinder_geometry::vector::vec2f;
 use raqote::Point;
 use smallvec::SmallVec;
 
-use crate::rendering::drawing::TextSize;
 use crate::v2::{Interaction, Participant};
-use pathfinder_geometry::rect::RectF;
 
 // todo generify; take a slice of strings rather than an interaction set
 pub fn measure_all_participants(
