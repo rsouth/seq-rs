@@ -5,7 +5,7 @@ extern crate pretty_env_logger;
 use std::time::Instant;
 
 use sequencer::get_text;
-use sequencer::rendering::render_context::{RenderingContext, Theme};
+use sequencer::rendering::render_context::Theme;
 use sequencer::v2::*;
 
 fn main() {
@@ -17,9 +17,13 @@ fn main() {
     let diagram = diagram.unwrap();
 
     let theme = Theme::default();
-    let mut rendering_context = RenderingContext::create(&diagram, theme);
+    let mut diagram = diagram.create(theme).unwrap();
 
-    diagram.draw(&mut rendering_context).unwrap();
+    // let mut rendering_context = RenderingContext::create(&diagram, theme);
+
+    diagram.draw().unwrap();
+
+    diagram.save_png("example.png");
 
     info!(
         "Finished in {} micros ({}ms)",

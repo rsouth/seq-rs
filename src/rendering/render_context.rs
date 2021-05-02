@@ -3,12 +3,14 @@ use crate::rendering::render_context::RenderingConstants::{
     ParticipantPadding,
 };
 use crate::rendering::text::measure_all_participants;
-use crate::v2::Diagram;
+use crate::v2::{Interaction, Participant};
 use font_kit::family_name::FamilyName;
 use font_kit::font::Font;
 use font_kit::properties::{Properties, Weight};
 use font_kit::source::SystemSource;
 use raqote::DrawTarget;
+
+use std::fmt::{Display, Formatter};
 use std::time::Instant;
 
 // == Rendering Context ===================================
@@ -21,13 +23,17 @@ pub struct RenderingContext {
 }
 
 impl RenderingContext {
-    // todo make this diagram and theme
-    pub fn create(diagram: &Diagram, theme: Theme) -> Self {
+    pub fn create(
+        interactions: &[Interaction],
+        participants: &[Participant],
+        theme: Theme,
+    ) -> Self {
         let participant_font =
             RenderingContext::get_system_font(theme.participant_font_family.as_str());
-        let diagram_height = RenderingContext::calculate_diagram_height(diagram);
+        let diagram_height = RenderingContext::calculate_diagram_height(interactions);
         let diagram_width = RenderingContext::calculate_diagram_width(
-            diagram,
+            interactions,
+            participants,
             &participant_font,
             theme.participant_font_pt,
         );
@@ -43,29 +49,40 @@ impl RenderingContext {
         }
     }
 
-    pub fn calculate_diagram_height(diagram: &Diagram) -> i32 {
-        let interaction_count = diagram.interactions.len() as f32;
+    pub fn calculate_diagram_height(interactions: &[Interaction]) -> i32 {
+        let interaction_count = interactions.len() as f32;
         let height = (DiagramPadding.value() * 2_f32)
             + (DiagramMargin.value() * 2_f32)
             + ParticipantHeight.value()
+            + ParticipantPadding.value()
+            + (interaction_count * 10.0)
+            + (interaction_count * ParticipantPadding.value())
             + (interaction_count * GapBetweenInteractions.value());
         debug!("Calculated height {}", height);
         height as i32
+
+        // //
+        // y_position
+        //     + ParticipantPadding.value()
+        //     + participant_box_height
+        //     + (p.active_from as f32 * GapBetweenInteractions.value()),
+        // 10_f32,
+        // p.active_until as f32 * RenderingConstants::GapBetweenInteractions.value(),
     }
 
     // todo doesn't calculate the width added by interaction messages etc
     pub fn calculate_diagram_width(
-        diagram: &Diagram,
+        interactions: &[Interaction],
+        participants: &[Participant],
         font: &Font,
         participant_font_size: f32,
     ) -> i32 {
-        let partic_width =
-            measure_all_participants(font, participant_font_size, &diagram.interactions);
+        let partic_width = measure_all_participants(font, participant_font_size, interactions);
         let width = (DiagramPadding.value() * 2_f32)
             + (DiagramMargin.value() * 2_f32)
             + partic_width as f32
-            + ((diagram.participants.len() - 1) as f32 * ParticipantHGap.value())
-            + (diagram.participants.len() as f32 * (ParticipantPadding.value() * 2_f32));
+            + ((participants.len() - 1) as f32 * ParticipantHGap.value())
+            + (participants.len() as f32 * (ParticipantPadding.value() * 2_f32));
         debug!("Calculated width {}", width);
         width as i32
     }
@@ -125,7 +142,7 @@ impl RenderingConstants {
             RenderingConstants::ParticipantHeight => 50_f32,
             RenderingConstants::ParticipantHGap => 25_f32,
             RenderingConstants::ParticipantPadding => 10_f32,
-            RenderingConstants::GapBetweenInteractions => 50_f32,
+            RenderingConstants::GapBetweenInteractions => 25_f32,
         }
     }
 }
@@ -137,6 +154,17 @@ pub struct Theme {
 
     pub participant_font_family: String,
     pub participant_font_pt: f32,
+}
+
+impl Display for Theme {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "Theme {{ title_font: {{family: {}, size: {}}}, participant_font: {{ family: {}, size: {} }} }} ",
+            self._title_font_family, self._title_font_pt,
+            self.participant_font_family, self.participant_font_pt
+        )
+    }
 }
 
 impl Default for Theme {

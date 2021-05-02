@@ -1,6 +1,8 @@
+use crate::rendering::drawing::DrawingMetrics;
 use crate::rendering::render_context::RenderingContext;
 use core::fmt;
 use std::error::Error;
+use std::fmt::{Debug, Display, Formatter};
 use std::str::Lines;
 
 pub mod parsing;
@@ -11,16 +13,36 @@ pub type InteractionSet = Vec<Interaction>;
 pub type ParticipantSet = Vec<Participant>;
 
 // == Diagram =============================================
-#[derive(Debug)]
+// #[derive(Debug)]
 pub struct Diagram {
     pub interactions: InteractionSet,
     pub participants: ParticipantSet,
+    pub rendering_context: RenderingContext,
+}
+impl Display for Diagram {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "Diagram {{interactions: {}, participants: {}, rendering_context: {{w: {}, h: {}, theme: {}}}",
+        self.interactions.len(), self.participants.len(), self.rendering_context.diagram_width, self.rendering_context.diagram_height, self.rendering_context.theme)
+    }
 }
 
 // == Participant =========================================
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Clone)]
 pub struct Participant {
     pub name: String,
+    pub active_from: u32,
+    pub active_until: u32,
+    pub count: u32,
+}
+impl Participant {
+    pub fn new(name: &str, count: u32) -> Self {
+        Participant {
+            name: name.to_string(),
+            active_from: 0,
+            active_until: 0,
+            count,
+        }
+    }
 }
 
 // == Interaction =========================================
@@ -29,6 +51,7 @@ pub struct Interaction {
     pub from_participant: Participant,
     pub to_participant: Participant,
     pub message: Option<Message>,
+    pub count: u32,
 }
 
 // == Message =============================================
@@ -74,7 +97,7 @@ pub trait Parse<T> {
 
 // == Draw Trait ==========================================
 pub trait Draw {
-    fn draw(&self, rc: &mut RenderingContext) -> DrawResult;
+    fn draw(&self, rc: &mut RenderingContext, dm: &DrawingMetrics) -> DrawResult;
 }
 
 // == Tests ===============================================
