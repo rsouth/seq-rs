@@ -1,82 +1,77 @@
-// use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use sequencer::rendering::render_context::{RenderingContext, Theme};
+use sequencer::v2::{Diagram, Parse};
+
+pub fn get_text() -> String {
+    String::from(
+        ":theme Default
+ :title Example Sequence Diagram
+ :author Mr. Sequence Diagram
+ :date
+
+ # diagram
+ Client -> Server: Request
+ Server -> Server: Parses request
+ Server ->> Service: Query
+ Service -->> Server: Data
+ Server --> Client: Response
+ Left -> Right
+ {AMPS} -> Client: ",
+    )
+}
+
+// fn create_diagram_multiline(c: &mut Criterion) {
+//     let diagram = Diagram::parse(get_text().lines()).unwrap();
+//     let mut d = &diagram;
 //
-// use sequencer::parser::{Interaction, InteractionSet, Participant};
-// use sequencer::render_context::RenderingContext;
-// use sequencer::rendering::text::measure_text;
-// use sequencer::rendering::{do_render, Theme};
-// use sequencer::Diagram;
-//
-// // fn measure_text_single_char(c: &mut Criterion) {
-// //     let font = RenderingContext::get_system_font("Arial");
-// //     c.bench_function("measure_text single", |b| {
-// //         b.iter(|| measure_text(black_box(&font), black_box(20.), black_box("A")))
-// //     });
-// // }
-// //
-// // fn measure_calculate_diagram_height(c: &mut Criterion) {
-// //     let p: InteractionSet = vec![Interaction {
-// //         from_participant: Participant {
-// //             name: "One".to_string(),
-// //         },
-// //         to_participant: Participant {
-// //             name: "Two".to_string(),
-// //         },
-// //         message: None,
-// //         order: 0,
-// //     }];
-// //     let diagram: Diagram = Diagram::new(Theme::default(), p);
-// //     c.bench_function("calculate_diagram_height", |b| {
-// //         b.iter(|| RenderingContext::calculate_diagram_height(black_box(&diagram)));
-// //     });
-// // }
-// //
-// // fn measure_calculate_diagram_width(c: &mut Criterion) {
-// //     let p: InteractionSet = vec![Interaction {
-// //         from_participant: Participant {
-// //             name: "One".to_string(),
-// //         },
-// //         to_participant: Participant {
-// //             name: "Two".to_string(),
-// //         },
-// //         message: None,
-// //         order: 0,
-// //     }];
-// //     let diagram: Diagram = Diagram::new(Theme::default(), p);
-// //     let font = &RenderingContext::get_system_font("Arial");
-// //     c.bench_function("calculate_diagram_width", |b| {
-// //         b.iter(|| {
-// //             RenderingContext::calculate_diagram_width(
-// //                 black_box(&diagram),
-// //                 black_box(&font),
-// //                 black_box(40.),
-// //             )
-// //         })
-// //     });
-// // }
-// //
-// // fn measure_draw_partic_names(c: &mut Criterion) {
-// //     let interaction_set: InteractionSet = vec![Interaction {
-// //         from_participant: Participant {
-// //             name: "One".to_string(),
-// //         },
-// //         to_participant: Participant {
-// //             name: "Two".to_string(),
-// //         },
-// //         message: None,
-// //         order: 0,
-// //     }];
-// //     let theme = Theme::default();
-// //     let diagram: Diagram = Diagram::new(theme, interaction_set);
-// //     c.bench_function("measure_draw_partic_names", |b| {
-// //         b.iter(|| do_render(black_box(&diagram)))
-// //     });
-// // }
-//
-// criterion_group!(
-//     benches,
-//     // measure_text_single_char,
-//     // measure_calculate_diagram_height,
-//     // measure_calculate_diagram_width,
-//     // measure_draw_partic_names
-// );
-// criterion_main!(benches);
+//     c.bench_function("create diagram multiline", |b| {
+//         b.iter(|| d.create(black_box(Theme::default())))
+//     });
+// }
+
+fn render_diagram_multiline(c: &mut Criterion) {
+    let diagram = Diagram::parse(get_text().lines()).unwrap();
+    let mut diagram = diagram.create(Theme::default()).unwrap();
+
+    c.bench_function("rendering diagram multiline", |b| b.iter(|| diagram.draw()));
+}
+
+fn measure_calculate_diagram_width(c: &mut Criterion) {
+    let diagram = Diagram::parse(get_text().lines()).unwrap();
+    let diagram = diagram.create(Theme::default()).unwrap();
+    let font = RenderingContext::get_system_font("Arial");
+    c.bench_function("calculate diagram width", |b| {
+        b.iter(|| {
+            RenderingContext::calculate_diagram_width(
+                black_box(&diagram.interactions),
+                black_box(&diagram.participants),
+                black_box(&font),
+                black_box(40_f32),
+            )
+        })
+    });
+}
+
+fn measure_calculate_diagram_height(c: &mut Criterion) {
+    let diagram = Diagram::parse(get_text().lines()).unwrap();
+    let diagram = diagram.create(Theme::default()).unwrap();
+    let font = RenderingContext::get_system_font("Arial");
+    c.bench_function("calculate diagram height", |b| {
+        b.iter(|| {
+            RenderingContext::calculate_diagram_height(
+                black_box(&diagram.interactions),
+                black_box(&font),
+                black_box(40_f32),
+            )
+        })
+    });
+}
+
+criterion_group!(
+    benches,
+    // create_diagram_multiline,
+    render_diagram_multiline,
+    measure_calculate_diagram_width,
+    measure_calculate_diagram_height
+);
+criterion_main!(benches);

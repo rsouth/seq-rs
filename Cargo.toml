@@ -31,10 +31,10 @@ criterion = { version = "0.3", features = [ "html_reports" ] }
 name = "benchmark_parsing"
 harness = false
 
-#[[bench]]
-#name = "benchmark_rendering"
-#harness = false
-#
+[[bench]]
+name = "benchmark_rendering"
+harness = false
+
 #[[bench]]
 #name = "text_benchmarks"
 #harness = false

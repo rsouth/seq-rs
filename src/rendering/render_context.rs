@@ -1,14 +1,13 @@
 use crate::rendering::render_context::RenderingConstants::{
-    DiagramMargin, DiagramPadding, GapBetweenInteractions, ParticipantHGap, ParticipantHeight,
-    ParticipantPadding,
+    DiagramMargin, DiagramPadding, GapBetweenInteractions, ParticipantHGap, ParticipantPadding,
 };
-use crate::rendering::text::measure_all_participants;
+use crate::rendering::text::{measure_all_participants, measure_text};
 use crate::v2::{Interaction, Participant};
 use font_kit::family_name::FamilyName;
 use font_kit::font::Font;
 use font_kit::properties::{Properties, Weight};
 use font_kit::source::SystemSource;
-use raqote::DrawTarget;
+use raqote::{Color, DrawOptions, DrawTarget, LineCap, LineJoin, SolidSource, StrokeStyle};
 
 use std::fmt::{Display, Formatter};
 use std::time::Instant;
@@ -30,7 +29,11 @@ impl RenderingContext {
     ) -> Self {
         let participant_font =
             RenderingContext::get_system_font(theme.participant_font_family.as_str());
-        let diagram_height = RenderingContext::calculate_diagram_height(interactions);
+        let diagram_height = RenderingContext::calculate_diagram_height(
+            interactions,
+            &participant_font,
+            theme.participant_font_pt,
+        );
         let diagram_width = RenderingContext::calculate_diagram_width(
             interactions,
             participants,
@@ -49,25 +52,19 @@ impl RenderingContext {
         }
     }
 
-    pub fn calculate_diagram_height(interactions: &[Interaction]) -> i32 {
+    pub fn calculate_diagram_height(
+        interactions: &[Interaction],
+        font: &Font,
+        font_size: f32,
+    ) -> i32 {
         let interaction_count = interactions.len() as f32;
         let height = (DiagramPadding.value() * 2_f32)
             + (DiagramMargin.value() * 2_f32)
-            + ParticipantHeight.value()
             + ParticipantPadding.value()
-            + (interaction_count * 10.0)
-            + (interaction_count * ParticipantPadding.value())
+            + measure_text(font, font_size, "A").unwrap().height() as f32
             + (interaction_count * GapBetweenInteractions.value());
         debug!("Calculated height {}", height);
         height as i32
-
-        // //
-        // y_position
-        //     + ParticipantPadding.value()
-        //     + participant_box_height
-        //     + (p.active_from as f32 * GapBetweenInteractions.value()),
-        // 10_f32,
-        // p.active_until as f32 * RenderingConstants::GapBetweenInteractions.value(),
     }
 
     // todo doesn't calculate the width added by interaction messages etc
@@ -126,7 +123,7 @@ pub enum RenderingConstants {
     DiagramMargin,
 
     // Participant
-    ParticipantHeight,
+    // ParticipantHeight,
     ParticipantHGap,
     ParticipantPadding,
 
@@ -139,7 +136,7 @@ impl RenderingConstants {
         match *self {
             RenderingConstants::DiagramPadding => 10_f32,
             RenderingConstants::DiagramMargin => 15_f32,
-            RenderingConstants::ParticipantHeight => 50_f32,
+            // RenderingConstants::ParticipantHeight => 50_f32,
             RenderingConstants::ParticipantHGap => 25_f32,
             RenderingConstants::ParticipantPadding => 10_f32,
             RenderingConstants::GapBetweenInteractions => 25_f32,
@@ -147,13 +144,56 @@ impl RenderingConstants {
     }
 }
 
+// == Theme ===============================================
 #[derive(Debug)]
 pub struct Theme {
+    // title font
     pub _title_font_family: String,
     pub _title_font_pt: f32,
 
+    // participant font
     pub participant_font_family: String,
     pub participant_font_pt: f32,
+
+    // drawing options
+    pub default_stroke_style: StrokeStyle,
+    pub dashed_stroke_style: StrokeStyle,
+    pub default_draw_options: DrawOptions,
+
+    // colors
+    pub solid_black_source: SolidSource,
+    pub solid_dgrey_source: SolidSource,
+    pub solid_lgrey_source: SolidSource,
+    pub solid_red_source: SolidSource,
+    pub solid_dark_source: SolidSource,
+    pub solid_bg_red: SolidSource,
+}
+
+impl Default for Theme {
+    fn default() -> Self {
+        Theme {
+            _title_font_family: "Arial".to_string(),
+            _title_font_pt: 54.0,
+            participant_font_family: "Arial".to_string(),
+            participant_font_pt: 40.0,
+            default_stroke_style: StrokeStyle::default(),
+            dashed_stroke_style: StrokeStyle {
+                width: 1.,
+                cap: LineCap::Butt,
+                join: LineJoin::Miter,
+                miter_limit: 10.,
+                dash_array: vec![10_f32, 18_f32],
+                dash_offset: 16.,
+            },
+            default_draw_options: DrawOptions::default(),
+            solid_black_source: SolidSource::from(Color::new(255, 0, 0, 0)),
+            solid_dgrey_source: SolidSource::from(Color::new(200, 255, 200, 200)),
+            solid_lgrey_source: SolidSource::from(Color::new(255, 20, 20, 20)),
+            solid_red_source: SolidSource::from(Color::new(200, 150, 30, 30)),
+            solid_dark_source: SolidSource::from(Color::new(200, 200, 200, 200)),
+            solid_bg_red: SolidSource::from(Color::new(200, 20, 255, 20)),
+        }
+    }
 }
 
 impl Display for Theme {
@@ -164,16 +204,5 @@ impl Display for Theme {
             self._title_font_family, self._title_font_pt,
             self.participant_font_family, self.participant_font_pt
         )
-    }
-}
-
-impl Default for Theme {
-    fn default() -> Self {
-        Theme {
-            _title_font_family: "Arial".to_string(),
-            _title_font_pt: 54.0,
-            participant_font_family: "Arial".to_string(),
-            participant_font_pt: 40.0,
-        }
     }
 }

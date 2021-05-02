@@ -3,7 +3,7 @@ use crate::v2::{
     Diagram, Interaction, InteractionSet, Message, Parse, ParseError, ParseResult, Participant,
     ParticipantSet,
 };
-use itertools::Itertools;
+use itertools::{Itertools, MinMaxResult};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
@@ -15,6 +15,7 @@ lazy_static! {
     static ref INTERACTION_REGEX: Regex = Regex::new("^(.+)\\s+-+>+\\s+([^:]+):?(.*)$").unwrap();
 }
 
+// == Diagram Builder =====================================
 pub struct DiagramBuilder {
     pub(crate) interactions: InteractionSet,
     pub(crate) participants: ParticipantSet,
@@ -32,6 +33,7 @@ impl DiagramBuilder {
     }
 }
 
+// == Participant Record ==================================
 struct ParticipantRecord {
     record: HashMap<String, u32>,
     partipants: AtomicU32,
@@ -60,6 +62,7 @@ impl ParticipantRecord {
     }
 }
 
+// == Parse for Diagram ===================================
 impl Parse<DiagramBuilder> for Diagram {
     fn parse(lines: Lines) -> ParseResult<DiagramBuilder> {
         let interactions: InteractionSet = InteractionSet::parse(lines)?;
@@ -77,29 +80,22 @@ impl Parse<DiagramBuilder> for Diagram {
 
         // figure out the first and last appearance of the participant in interactions
         for x in &mut participants {
-            let first_occurence = interactions
+            if let MinMaxResult::MinMax(min, max) = interactions
                 .iter()
-                .filter(|i| i.from_participant.name == x.name || i.to_participant.name == x.name)
-                .map(|i| i.count)
-                .min()
-                .unwrap();
-
-            let last_occurence = interactions
-                .iter()
-                .filter(|i| i.from_participant.name == x.name || i.to_participant.name == x.name)
-                .map(|i| i.count)
-                .max()
-                .unwrap();
-
-            x.active_from = first_occurence;
-            x.active_until = last_occurence;
-            println!(
-                "first: {}, last: {}, count: {}",
-                first_occurence, last_occurence, x.count
-            );
+                .filter_map(|i| {
+                    match i.from_participant.name == x.name || i.to_participant.name == x.name {
+                        true => Option::Some(i.count),
+                        false => Option::None,
+                    }
+                })
+                .minmax()
+            {
+                x.active_from = min;
+                x.active_until = max;
+            };
         }
 
-        println!("Partics: {:?}", participants);
+        debug!("Partics: {:?}", participants);
 
         Ok(DiagramBuilder {
             interactions,
@@ -108,6 +104,7 @@ impl Parse<DiagramBuilder> for Diagram {
     }
 }
 
+// == Parse for InteractionSet ============================
 impl Parse<InteractionSet> for InteractionSet {
     fn parse(lines: Lines) -> Result<InteractionSet, ParseError> {
         let mut partic_record = ParticipantRecord::default();
@@ -131,14 +128,14 @@ impl Parse<InteractionSet> for InteractionSet {
                         None
                     };
 
-                    let interacton = Interaction {
+                    let interaction = Interaction {
                         from_participant,
                         to_participant,
                         message,
                         count,
                     };
                     count += 1;
-                    Some(interacton)
+                    Some(interaction)
                 } else {
                     None
                 }

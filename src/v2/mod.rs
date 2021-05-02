@@ -13,7 +13,6 @@ pub type InteractionSet = Vec<Interaction>;
 pub type ParticipantSet = Vec<Participant>;
 
 // == Diagram =============================================
-// #[derive(Debug)]
 pub struct Diagram {
     pub interactions: InteractionSet,
     pub participants: ParticipantSet,

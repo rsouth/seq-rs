@@ -1,3 +1,11 @@
+use std::collections::HashMap;
+use std::time::Instant;
+
+use euclid::{Rect, Size2D, UnknownUnit};
+use pathfinder_geometry::rect::RectF;
+use pathfinder_geometry::vector::Vector2F;
+use raqote::{DrawOptions, PathBuilder, Point, Source, StrokeStyle};
+
 use crate::rendering::render_context::RenderingConstants::{
     DiagramMargin, DiagramPadding, GapBetweenInteractions, ParticipantHGap, ParticipantPadding,
 };
@@ -5,12 +13,8 @@ use crate::rendering::render_context::RenderingContext;
 use crate::rendering::shapes::rect_path;
 use crate::rendering::text::measure_text;
 use crate::v2::{Diagram, Draw, DrawResult, InteractionSet, Participant, ParticipantSet};
-use raqote::{
-    Color, DrawOptions, LineCap, LineJoin, PathBuilder, Point, SolidSource, Source, StrokeStyle,
-};
-use std::collections::HashMap;
-use std::time::Instant;
 
+// == Drawing Metrics =====================================
 pub struct DrawingMetrics {
     data: HashMap<String, f32>,
     data_w: HashMap<String, f32>,
@@ -30,25 +34,24 @@ impl DrawingMetrics {
         self.data.insert(name.to_string(), pos);
     }
 
-    fn get_x(&self, name: &str) -> Option<&f32> {
-        self.data.get(name)
+    fn get_x(&self, name: &str) -> f32 {
+        *self.data.get(name).unwrap()
     }
 
     fn put_w(&mut self, name: &str, w: f32) {
         self.data_w.insert(name.to_string(), w);
     }
 
-    fn get_w(&self, name: &str) -> Option<&f32> {
-        self.data_w.get(name)
+    fn get_w(&self, name: &str) -> f32 {
+        *self.data_w.get(name).unwrap()
     }
 }
 
 // == Participant =========================================
 impl Draw for ParticipantSet {
-    fn draw(&self, rc: &mut RenderingContext, _dm: &DrawingMetrics) -> DrawResult {
+    fn draw(&self, rc: &mut RenderingContext, dm: &DrawingMetrics) -> DrawResult {
         // for text
-        let font_draw_options = DrawOptions::default();
-        let font_color = Source::Solid(SolidSource::from(Color::new(255, 0, 0, 0)));
+        let font_color = Source::Solid(rc.theme.solid_black_source);
         let participant_box_height = (ParticipantPadding.value() * 2.0)
             + measure_text(&rc.participant_font, rc.theme.participant_font_pt, "A")
                 .unwrap()
@@ -63,21 +66,23 @@ impl Draw for ParticipantSet {
         let mut activation_box_path = PathBuilder::new();
 
         self.iter().for_each(|p: &Participant| {
+            let partic_string_width = dm.get_w(&p.name);
+
             // == Participant Boxes ==
-            let rect =
-                measure_text(&rc.participant_font, rc.theme.participant_font_pt, &p.name).unwrap();
             rect_path.rect(
                 x_position,
                 y_position,
-                rect.width() as f32 + (2_f32 * ParticipantPadding.value()),
-                participant_box_height as f32,
+                partic_string_width + (2_f32 * ParticipantPadding.value()),
+                participant_box_height,
             );
+
             // == NAMES ==
-            // todo y = padding + margin + fontHeight...
             let point = Point::new(
                 x_position + ParticipantPadding.value(),
                 y_position
-                    + (ParticipantPadding.value() + DiagramMargin.value() + DiagramPadding.value()),
+                    + ParticipantPadding.value()
+                    + DiagramMargin.value()
+                    + DiagramPadding.value(),
             );
             rc.draw_target.draw_text(
                 &rc.participant_font,
@@ -85,27 +90,26 @@ impl Draw for ParticipantSet {
                 &p.name,
                 point,
                 &font_color,
-                &font_draw_options,
+                &rc.theme.default_draw_options,
             );
 
             // == Lifeline ==
             rect_path.move_to(
-                x_position + (rect.width() / 2) as f32 + ParticipantPadding.value(),
+                x_position + (partic_string_width / 2.0) as f32 + ParticipantPadding.value(),
                 y_position + participant_box_height as f32,
             );
             rect_path.line_to(
-                x_position + (rect.width() / 2) as f32 + ParticipantPadding.value(),
+                x_position + (partic_string_width / 2.0) as f32 + ParticipantPadding.value(),
                 rc.diagram_height as f32 - y_position,
             );
 
             // == Activation Box
-            // from first appearance to last?
-            println!(
-                "{} active from {} to {}",
+            debug!(
+                "Activation Box for {} active from {} to {}",
                 p.name, p.active_from, p.active_until
             );
             activation_box_path.rect(
-                x_position + (rect.width() / 2) as f32 + 5.0,
+                x_position + (partic_string_width / 2.0) as f32 + 5.0,
                 y_position
                     + ParticipantPadding.value()
                     + participant_box_height
@@ -117,29 +121,30 @@ impl Draw for ParticipantSet {
             );
 
             // update X positions for next participant...
-            x_position += rect.width() as f32
+            x_position += partic_string_width
                 + (ParticipantPadding.value() * 2_f32)
                 + ParticipantHGap.value();
         });
 
         // draw
-        let stroke = StrokeStyle::default();
         rc.draw_target.stroke(
             &rect_path.finish(),
             &font_color,
-            &stroke,
+            &rc.theme.default_stroke_style,
             &DrawOptions::new(),
         );
 
-        let sss = Source::Solid(SolidSource::from(Color::new(255, 20, 20, 20)));
-
         let path = activation_box_path.finish();
-        rc.draw_target.fill(&path, &sss, &DrawOptions::new());
+        rc.draw_target.fill(
+            &path,
+            &Source::Solid(rc.theme.solid_lgrey_source),
+            &DrawOptions::new(),
+        );
         rc.draw_target.stroke(
             &path,
-            &Source::Solid(SolidSource::from_unpremultiplied_argb(200, 255, 200, 200)),
-            &StrokeStyle::default(),
-            &DrawOptions::new(),
+            &Source::Solid(rc.theme.solid_dgrey_source),
+            &rc.theme.default_stroke_style,
+            &rc.theme.default_draw_options,
         );
 
         Ok(())
@@ -157,46 +162,37 @@ impl Draw for InteractionSet {
         let mut rect_path = PathBuilder::new();
         let mut h_line = PathBuilder::new();
 
-        self.iter().for_each(|interaction| {
-            let participant_box_height = (ParticipantPadding.value() * 2.0)
-                + measure_text(&rc.participant_font, rc.theme.participant_font_pt, "A")
-                    .unwrap()
-                    .height() as f32;
-            let this_y = DiagramPadding.value()
-                + DiagramMargin.value()
-                + ParticipantPadding.value()
-                + participant_box_height
-                + interaction.count as f32 * GapBetweenInteractions.value();
+        let participant_box_height = (ParticipantPadding.value() * 2.0)
+            + measure_text(&rc.participant_font, rc.theme.participant_font_pt, "A")
+                .unwrap()
+                .height() as f32;
+        let initial_y = DiagramPadding.value()
+            + DiagramMargin.value()
+            + ParticipantPadding.value()
+            + participant_box_height;
 
-            let from_x = *_dm
-                .get_x(interaction.from_participant.name.as_str())
-                .unwrap();
-            let to_x = *_dm.get_x(interaction.to_participant.name.as_str()).unwrap();
+        self.iter().for_each(|interaction| {
+            let this_y = initial_y + interaction.count as f32 * GapBetweenInteractions.value();
+
+            let from_x = _dm.get_x(interaction.from_participant.name.as_str());
+            let to_x = _dm.get_x(interaction.to_participant.name.as_str());
 
             let left_to_right = from_x < to_x;
             let from_adj = if left_to_right { 15.0 } else { 5.0 };
             let to_adj = if left_to_right { 5.0 } else { 15.0 };
             rect_path.move_to(
-                from_x
-                    + *_dm
-                        .get_w(interaction.from_participant.name.as_str())
-                        .unwrap()
-                        / 2_f32
-                    + from_adj,
+                from_x + _dm.get_w(interaction.from_participant.name.as_str()) / 2_f32 + from_adj,
                 this_y,
             );
             rect_path.line_to(
-                to_x + *_dm.get_w(interaction.to_participant.name.as_str()).unwrap() / 2_f32
-                    + to_adj,
+                to_x + _dm.get_w(interaction.to_participant.name.as_str()) / 2_f32 + to_adj,
                 this_y,
             );
 
             h_line.move_to(0.0, this_y);
             h_line.line_to(rc.diagram_width as f32, this_y);
 
-            // rect_path.move_to()
-
-            println!(
+            debug!(
                 "drawing interaction from {} {} to {} {}",
                 interaction.from_participant.name,
                 interaction.from_participant.count,
@@ -207,49 +203,47 @@ impl Draw for InteractionSet {
 
         rc.draw_target.stroke(
             &rect_path.finish(),
-            &Source::Solid(SolidSource::from_unpremultiplied_argb(200, 20, 255, 20)),
+            &Source::Solid(rc.theme.solid_bg_red),
             &StrokeStyle::default(),
             &DrawOptions::new(),
         );
 
-        let ss = StrokeStyle {
-            width: 1.,
-            cap: LineCap::Butt,
-            join: LineJoin::Miter,
-            miter_limit: 10.,
-            dash_array: vec![10_f32, 18_f32],
-            dash_offset: 16.,
-        };
         rc.draw_target.stroke(
             &h_line.finish(),
-            &Source::Solid(SolidSource::from_unpremultiplied_argb(200, 200, 200, 200)),
-            &ss,
+            &Source::Solid(rc.theme.solid_dark_source),
+            &rc.theme.dashed_stroke_style,
             &DrawOptions::new(),
         );
 
         Ok(())
     }
 }
+
+pub type TextSize = Size2D<f32, UnknownUnit>;
+
 // == Diagram =============================================
 impl Diagram {
     pub fn draw(&mut self) -> DrawResult {
-        let options = DrawOptions::default();
-        let src = Source::Solid(SolidSource::from(Color::new(200, 150, 30, 30)));
         let start = Instant::now();
+
+        // Background rectangle
         let rpath = rect_path(
             self.rendering_context.diagram_width,
             self.rendering_context.diagram_height,
         );
-        self.rendering_context
-            .draw_target
-            .fill(&rpath, &src, &options);
+        self.rendering_context.draw_target.fill(
+            &rpath,
+            &Source::Solid(self.rendering_context.theme.solid_red_source),
+            &self.rendering_context.theme.default_draw_options,
+        );
         debug!(
             "Filled background rect in {}µs ({}ms)",
             start.elapsed().as_micros(),
             start.elapsed().as_millis()
         );
 
-        let dm = self.precalc_x(&self.rendering_context);
+        //
+        let dm = self.precalculate_x(&self.rendering_context);
 
         let start = Instant::now();
         self.participants
@@ -266,7 +260,7 @@ impl Diagram {
         Ok(())
     }
 
-    fn precalc_x(&self, rc: &RenderingContext) -> DrawingMetrics {
+    fn precalculate_x(&self, rc: &RenderingContext) -> DrawingMetrics {
         let mut x_position: f32 = DiagramPadding.value() + DiagramMargin.value();
         let mut dm = DrawingMetrics::default();
         self.participants.iter().for_each(|p: &Participant| {
