@@ -39,7 +39,7 @@ fn render_diagram_multiline(c: &mut Criterion) {
 fn measure_calculate_diagram_width(c: &mut Criterion) {
     let diagram = Diagram::parse(get_text().lines()).unwrap();
     let diagram = diagram.create(Theme::default()).unwrap();
-    let font = RenderingContext::get_system_font("Arial");
+    let font = RenderingContext::get_font("Arial");
     c.bench_function("calculate diagram width", |b| {
         b.iter(|| {
             RenderingContext::calculate_diagram_width(
@@ -55,7 +55,7 @@ fn measure_calculate_diagram_width(c: &mut Criterion) {
 fn measure_calculate_diagram_height(c: &mut Criterion) {
     let diagram = Diagram::parse(get_text().lines()).unwrap();
     let diagram = diagram.create(Theme::default()).unwrap();
-    let font = RenderingContext::get_system_font("Arial");
+    let font = RenderingContext::get_font("Arial");
     c.bench_function("calculate diagram height", |b| {
         b.iter(|| {
             RenderingContext::calculate_diagram_height(

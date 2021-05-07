@@ -3,14 +3,10 @@ use crate::rendering::render_context::RenderingConstants::{
 };
 use crate::rendering::text::{measure_all_participants, measure_text};
 use crate::v2::{Interaction, Participant};
-use font_kit::family_name::FamilyName;
-use font_kit::font::Font;
-use font_kit::properties::{Properties, Weight};
-use font_kit::source::SystemSource;
 use raqote::{Color, DrawOptions, DrawTarget, LineCap, LineJoin, SolidSource, StrokeStyle};
 
+use fontdue::Font;
 use std::fmt::{Display, Formatter};
-use std::time::Instant;
 
 // == Rendering Context ===================================
 pub struct RenderingContext {
@@ -27,8 +23,7 @@ impl RenderingContext {
         participants: &[Participant],
         theme: Theme,
     ) -> Self {
-        let participant_font =
-            RenderingContext::get_system_font(theme.participant_font_family.as_str());
+        let participant_font = RenderingContext::get_font(theme.participant_font_family.as_str());
         let diagram_height = RenderingContext::calculate_diagram_height(
             interactions,
             &participant_font,
@@ -61,7 +56,7 @@ impl RenderingContext {
         let height = (DiagramPadding.value() * 2_f32)
             + (DiagramMargin.value() * 2_f32)
             + ParticipantPadding.value()
-            + measure_text(font, font_size, "A").unwrap().height() as f32
+            + measure_text(font, font_size, "A").height as f32
             + (interaction_count * GapBetweenInteractions.value());
         debug!("Calculated height {}", height);
         height as i32
@@ -84,6 +79,19 @@ impl RenderingContext {
         width as i32
     }
 
+    #[allow(dead_code)]
+    pub fn get_font(_file_name: &str) -> Font {
+        // Read the font data.
+        let font = include_bytes!("../../assets/Roboto-Thin.ttf") as &[u8];
+        // Parse it into the font type.
+        let settings = fontdue::FontSettings {
+            ..fontdue::FontSettings::default()
+        };
+
+        let font = fontdue::Font::from_bytes(font, settings).unwrap();
+        font
+    }
+
     // #[allow(dead_code)]
     // pub fn get_font() -> Font {
     //     let start = Instant::now();
@@ -97,24 +105,24 @@ impl RenderingContext {
     //     font
     // }
 
-    #[allow(dead_code)]
-    pub fn get_system_font(family_name: &str) -> Font {
-        let start = Instant::now();
-        let font = SystemSource::new()
-            .select_best_match(
-                &[FamilyName::Title(family_name.to_string())],
-                &Properties::new().weight(Weight::NORMAL),
-            )
-            .unwrap()
-            .load()
-            .unwrap(); // todo...
-        info!(
-            "Loaded font {} in {}ms",
-            font.full_name(),
-            start.elapsed().as_millis()
-        );
-        font
-    }
+    // #[allow(dead_code)]
+    // pub fn get_system_font(family_name: &str) -> Font {
+    //     let start = Instant::now();
+    //     let font = SystemSource::new()
+    //         .select_best_match(
+    //             &[FamilyName::Title(family_name.to_string())],
+    //             &Properties::new().weight(Weight::NORMAL),
+    //         )
+    //         .unwrap()
+    //         .load()
+    //         .unwrap(); // todo...
+    //     info!(
+    //         "Loaded font {} in {}ms",
+    //         font.full_name(),
+    //         start.elapsed().as_millis()
+    //     );
+    //     font
+    // }
 }
 
 // == Rendering Constants =================================

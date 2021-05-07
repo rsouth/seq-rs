@@ -8,7 +8,7 @@ use crate::rendering::render_context::RenderingConstants::{
 };
 use crate::rendering::render_context::RenderingContext;
 use crate::rendering::shapes::rect_path;
-use crate::rendering::text::measure_text;
+use crate::rendering::text::{draw_text, measure_text};
 use crate::v2::{Diagram, Draw, DrawResult, InteractionSet, Participant, ParticipantSet};
 
 // == Drawing Metrics =====================================
@@ -51,9 +51,7 @@ impl Draw for ParticipantSet {
         // for text
         let font_color = Source::Solid(rc.theme.solid_black_source);
         let participant_box_height = (ParticipantPadding.value() * 2.0)
-            + measure_text(&rc.participant_font, rc.theme.participant_font_pt, "A")
-                .unwrap()
-                .height() as f32;
+            + measure_text(&rc.participant_font, rc.theme.participant_font_pt, "A").height as f32;
 
         // for both...
         let y_position: f32 = DiagramPadding.value() + DiagramMargin.value();
@@ -89,20 +87,21 @@ impl Draw for ParticipantSet {
             // == NAMES ==
             let start = Instant::now();
             let point = Point::new(
-                x_position + ParticipantPadding.value(),
+                x_position /*+ ParticipantPadding.value()*/,
                 y_position
-                    + ParticipantPadding.value()
-                    + DiagramMargin.value()
-                    + DiagramPadding.value(),
+                    // + ParticipantPadding.value()
+                    // + DiagramMargin.value()
+                    // + DiagramPadding.value(),
             );
-            rc.draw_target.draw_text(
-                &rc.participant_font,
-                rc.theme.participant_font_pt,
-                &p.name,
-                point,
-                &font_color,
-                &rc.theme.default_draw_options,
-            );
+            // rc.draw_target.draw_text(
+            //     &rc.participant_font,
+            //     rc.theme.participant_font_pt,
+            //     &p.name,
+            //     point,
+            //     &font_color,
+            //     &rc.theme.default_draw_options,
+            // );
+            draw_text(rc, &p.name, point.x, point.y, rc.theme.participant_font_pt);
             trace!(
                 "Drew {} text in {}us ({}ms)",
                 &p.name,
@@ -204,9 +203,7 @@ impl Draw for InteractionSet {
         let mut h_line = PathBuilder::new();
 
         let participant_box_height = (ParticipantPadding.value() * 2.0)
-            + measure_text(&rc.participant_font, rc.theme.participant_font_pt, "A")
-                .unwrap()
-                .height() as f32;
+            + measure_text(&rc.participant_font, rc.theme.participant_font_pt, "A").height as f32;
         let initial_y = DiagramPadding.value()
             + DiagramMargin.value()
             + ParticipantPadding.value()
@@ -305,14 +302,12 @@ impl Diagram {
         let mut x_position: f32 = DiagramPadding.value() + DiagramMargin.value();
         let mut dm = DrawingMetrics::default();
         self.participants.iter().for_each(|p: &Participant| {
-            let rect =
-                measure_text(&rc.participant_font, rc.theme.participant_font_pt, &p.name).unwrap();
-            dm.put_x(&p.name, x_position);
-            dm.put_w(&p.name, rect.width() as f32);
+            let rect = measure_text(&rc.participant_font, rc.theme.participant_font_pt, &p.name);
+            dm.put_x(&p.name, x_position); // + (ParticipantPadding.value() * 2_f32));
+            dm.put_w(&p.name, rect.width as f32);
             // update X positions for next participant...
-            x_position += rect.width() as f32
-                + (ParticipantPadding.value() * 2_f32)
-                + ParticipantHGap.value();
+            x_position +=
+                rect.width as f32 + (ParticipantPadding.value() * 2_f32) + ParticipantHGap.value();
         });
         trace!(
             "Pre-calc x values in {}µs ({}ms)",
