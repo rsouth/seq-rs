@@ -46,7 +46,7 @@ pub fn rgb_to_u32(red: usize, green: usize, blue: usize, alpha: usize) -> u32 {
     let g = green.clamp(0, 255);
     let b = blue.clamp(0, 255);
     let a = alpha.clamp(0, 255);
-    ((a << 24) | (r << 16) | (g << 8) | (b << 0)) as u32
+    ((a << 24) | (r << 16) | (g << 8) | b) as u32
 }
 
 // todo generify; take a slice of strings rather than an interaction set
