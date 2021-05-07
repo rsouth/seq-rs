@@ -1,4 +1,4 @@
-use crate::rendering::render_context::{RenderingContext, Theme};
+use crate::v2::rendering::render_context::{RenderingContext, Theme};
 use crate::v2::{
     Diagram, Interaction, InteractionSet, Message, Parse, ParseError, ParseResult, Participant,
     ParticipantSet,

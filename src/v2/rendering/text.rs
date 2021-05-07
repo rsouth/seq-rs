@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use smallvec::SmallVec;
 
-use crate::rendering::render_context::RenderingContext;
+use crate::v2::rendering::render_context::RenderingContext;
 use crate::v2::{Interaction, Participant};
 use fontdue::layout::{CoordinateSystem, Layout, LayoutSettings, TextStyle};
 use fontdue::Font;

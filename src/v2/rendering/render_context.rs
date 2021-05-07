@@ -1,7 +1,7 @@
-use crate::rendering::render_context::RenderingConstants::{
+use crate::v2::rendering::render_context::RenderingConstants::{
     DiagramMargin, DiagramPadding, GapBetweenInteractions, ParticipantHGap, ParticipantPadding,
 };
-use crate::rendering::text::{measure_all_participants, measure_text};
+use crate::v2::rendering::text::{measure_all_participants, measure_text};
 use crate::v2::{Interaction, Participant};
 use raqote::{Color, DrawOptions, DrawTarget, LineCap, LineJoin, SolidSource, StrokeStyle};
 
@@ -82,7 +82,7 @@ impl RenderingContext {
     #[allow(dead_code)]
     pub fn get_font(_file_name: &str) -> Font {
         // Read the font data.
-        let font = include_bytes!("../../assets/Roboto-Thin.ttf") as &[u8];
+        let font = include_bytes!("../../../assets/Roboto-Thin.ttf") as &[u8];
         // Parse it into the font type.
         let settings = fontdue::FontSettings {
             ..fontdue::FontSettings::default()

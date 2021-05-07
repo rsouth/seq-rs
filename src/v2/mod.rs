@@ -1,11 +1,13 @@
-use crate::rendering::drawing::DrawingMetrics;
-use crate::rendering::render_context::RenderingContext;
 use core::fmt;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::Lines;
 
+use rendering::drawing::DrawingMetrics;
+use rendering::render_context::RenderingContext;
+
 pub mod parsing;
+pub mod rendering;
 
 pub type ParseResult<T> = std::result::Result<T, ParseError>;
 pub type DrawResult = std::result::Result<(), DrawError>;
@@ -157,4 +159,21 @@ fn test_diagram() {
     );
 
     assert_eq!(3, diagram.participants.len());
+}
+
+pub fn get_text() -> String {
+    String::from(
+        ":theme Default
+ :title Example Sequence Diagram
+ :author Mr. Sequence Diagram
+ :date
+
+ # diagram
+ Client -> Server: Request
+ Server -> Service: Handle request 
+ Service ->> Database: Query
+ Database -->> Service: Data
+ Service --> Server: Response
+ Server -> Client",
+    )
 }

@@ -1,4 +1,4 @@
-use crate::rendering::render_context::RenderingConstants::DiagramPadding;
+use crate::v2::rendering::render_context::RenderingConstants::DiagramPadding;
 use raqote::{Path, PathBuilder};
 use std::time::Instant;
 

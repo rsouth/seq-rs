@@ -3,12 +3,12 @@ use std::time::Instant;
 
 use raqote::{DrawOptions, PathBuilder, Point, Source, StrokeStyle};
 
-use crate::rendering::render_context::RenderingConstants::{
+use crate::v2::rendering::render_context::RenderingConstants::{
     DiagramMargin, DiagramPadding, GapBetweenInteractions, ParticipantHGap, ParticipantPadding,
 };
-use crate::rendering::render_context::RenderingContext;
-use crate::rendering::shapes::rect_path;
-use crate::rendering::text::{draw_text, measure_text};
+use crate::v2::rendering::render_context::RenderingContext;
+use crate::v2::rendering::shapes::rect_path;
+use crate::v2::rendering::text::{draw_text, measure_text};
 use crate::v2::{Diagram, Draw, DrawResult, InteractionSet, Participant, ParticipantSet};
 
 // == Drawing Metrics =====================================

@@ -4,8 +4,8 @@ extern crate pretty_env_logger;
 
 use std::time::Instant;
 
-use sequencer::get_text;
-use sequencer::rendering::render_context::Theme;
+use sequencer::v2::get_text;
+use sequencer::v2::rendering::render_context::Theme;
 use sequencer::v2::*;
 
 fn main() {

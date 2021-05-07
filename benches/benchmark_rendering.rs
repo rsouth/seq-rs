@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use sequencer::rendering::render_context::{RenderingContext, Theme};
+use sequencer::v2::rendering::render_context::{RenderingContext, Theme};
 use sequencer::v2::{Diagram, Parse};
 
 pub fn get_text() -> String {
