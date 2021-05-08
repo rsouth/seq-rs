@@ -95,7 +95,7 @@ impl Parse<DiagramBuilder> for Diagram {
             };
         }
 
-        debug!("Partics: {:?}", participants);
+        info!("Partics: {:?}", participants);
 
         Ok(DiagramBuilder {
             interactions,
@@ -142,7 +142,7 @@ impl Parse<InteractionSet> for InteractionSet {
             })
             .collect::<InteractionSet>();
 
-        debug!(
+        info!(
             "Parsed {} interactions: {:?}",
             parsed_interactions.len(),
             parsed_interactions,

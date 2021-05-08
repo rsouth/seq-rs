@@ -138,7 +138,7 @@ impl Draw for ParticipantSet {
                     + ((p.active_until as f32 - p.active_from as f32) - 1.0)
                         * GapBetweenInteractions.value(),
             );
-            debug!(
+            info!(
                 "Activation Box for {} active from {} to {}",
                 &p.name, p.active_from, p.active_until
             );
@@ -230,7 +230,7 @@ impl Draw for InteractionSet {
             h_line.move_to(0.0, this_y);
             h_line.line_to(rc.diagram_width as f32, this_y);
 
-            debug!(
+            info!(
                 "drawing interaction from {} {} to {} {}",
                 interaction.from_participant.name,
                 interaction.from_participant.count,
@@ -286,13 +286,13 @@ impl Diagram {
         self.participants
             .draw(&mut self.rendering_context, &dm)
             .unwrap();
-        debug!("Drew participants in {}µs", start.elapsed().as_micros());
+        info!("Drew participants in {}µs", start.elapsed().as_micros());
 
         let start = Instant::now();
         self.interactions
             .draw(&mut self.rendering_context, &dm)
             .unwrap();
-        debug!("Drew interactions in {}µs", start.elapsed().as_micros());
+        info!("Drew interactions in {}µs", start.elapsed().as_micros());
 
         Ok(())
     }
@@ -324,7 +324,7 @@ impl Diagram {
             .draw_target
             .write_png(file_name)
             .unwrap();
-        debug!(
+        info!(
             "Wrote to PNG in {}µs ({}ms)",
             start.elapsed().as_micros(),
             start.elapsed().as_millis()

@@ -17,7 +17,7 @@ pub fn draw_text(rc: &mut RenderingContext, content: &str, x: f32, y: f32, px: f
     layout.append(&[font], &TextStyle::new(&content, px, 0));
     for glyph in layout.glyphs() {
         let (metrics, coverage) = font.rasterize(glyph.key.c, px);
-        debug!("Metrics: {:?}", glyph);
+        info!("Metrics: {:?}", glyph);
 
         let mut image_data = Vec::with_capacity(coverage.len());
         for cov in coverage.iter() {
@@ -62,12 +62,12 @@ pub fn measure_all_participants(
         .unique()
         .map(|p: &Participant| {
             let width = measure_text(font, font_size, &p.name).width;
-            debug!("Width of {} is {}", &p.name, width);
+            info!("Width of {} is {}", &p.name, width);
             width
         })
         .sum();
 
-    debug!("Full participant width {}", sum_of_width);
+    info!("Full participant width {}", sum_of_width);
     sum_of_width
 }
 
