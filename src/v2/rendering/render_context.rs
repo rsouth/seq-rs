@@ -58,7 +58,7 @@ impl RenderingContext {
             + ParticipantPadding.value()
             + measure_text(font, font_size, "A").height as f32
             + (interaction_count * GapBetweenInteractions.value());
-        debug!("Calculated height {}", height);
+        info!("Calculated height {}", height);
         height as i32
     }
 
@@ -75,7 +75,7 @@ impl RenderingContext {
             + partic_width as f32
             + ((participants.len() - 1) as f32 * ParticipantHGap.value())
             + (participants.len() as f32 * (ParticipantPadding.value() * 2_f32));
-        debug!("Calculated width {}", width);
+        info!("Calculated width {}", width);
         width as i32
     }
 
