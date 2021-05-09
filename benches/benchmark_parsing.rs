@@ -1,7 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-
 use itertools::Itertools;
-use sequencer::v3::{DocumentParser, ParticipantParser};
+
+use sequencer::v3::parsing::{DocumentParser, ParticipantParser};
 
 pub fn get_text_vec() -> Vec<&'static str> {
     get_text().lines().collect_vec()
@@ -56,9 +56,7 @@ fn document_parser_v3(c: &mut Criterion) {
 
     let dp = DocumentParser::default();
 
-    c.bench_function("document parser", |b| {
-        b.iter(|| dp.parse((black_box(input))))
-    });
+    c.bench_function("document parser", |b| b.iter(|| dp.parse(black_box(input))));
 }
 
 criterion_group!(
