@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::v3::{
     model::{Header, Line},
     parsing::ParticipantParser,
@@ -27,8 +29,8 @@ impl Diagram {
         Diagram {
             theme: Default::default(),
             header: Header {},
-            interactions: vec![],
-            participants: vec![],
+            interactions: _interactions,
+            participants: participants.into_iter().collect_vec(),
         }
     }
 }

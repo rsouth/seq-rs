@@ -416,6 +416,14 @@ pub struct InteractionParser;
 
 #[allow(dead_code)]
 impl InteractionParser {
+    fn interaction_type(f: &Participant, t: &Participant) -> InteractionType {
+        match f.index.cmp(&t.index) {
+            std::cmp::Ordering::Less => InteractionType::L2R,
+            std::cmp::Ordering::Equal => InteractionType::SelfRef,
+            std::cmp::Ordering::Greater => InteractionType::R2L,
+        }
+    }
+
     // todo Pass #2 - interactions
     // iterate lines, looking only at Interaction types
     // note if an interaction is L2R, R2L, SelfRef etc.
@@ -424,6 +432,7 @@ impl InteractionParser {
     pub fn parse(document: &[Line], participants: &HashSet<Participant>) -> InteractionSet {
         info!("InteractionParser.parse({:#?})", document);
 
+        let interaction_index = AtomicU32::new(0);
         document
             .iter()
             .filter(|line| {
@@ -435,51 +444,49 @@ impl InteractionParser {
             .map(|line| match &line.line_contents {
                 LineContents::Interaction(f, t) => {
                     info!("I: {:?}, {:?}", f, t);
+
+                    let from_p = participants
+                        .iter()
+                        .filter(|p| p.name == f.0)
+                        .exactly_one()
+                        .unwrap()
+                        .clone();
+                    let to_p = participants
+                        .iter()
+                        .filter(|p| p.name == t.0)
+                        .exactly_one()
+                        .unwrap()
+                        .clone();
+
                     Interaction {
-                        index: participants
-                            .iter()
-                            .filter(|p| p.name == f.0)
-                            .exactly_one()
-                            .unwrap()
-                            .index as u32,
-                        from_participant: participants
-                            .iter()
-                            .filter(|p| p.name == f.0)
-                            .exactly_one()
-                            .unwrap()
-                            .clone(),
-                        to_participant: participants
-                            .iter()
-                            .filter(|p| p.name == t.0)
-                            .exactly_one()
-                            .unwrap()
-                            .clone(),
-                        interaction_type: InteractionType::L2R,
+                        index: interaction_index.fetch_add(1, Ordering::Relaxed),
+                        from_participant: from_p.clone(),
+                        to_participant: to_p.clone(),
+                        interaction_type: InteractionParser::interaction_type(&from_p, &to_p),
                         message: None,
                     }
                 }
                 LineContents::InteractionWithMessage(f, t, m) => {
                     info!("IwM: {:?}, {:?}, {:?}", f, t, m);
+
+                    let from_p = participants
+                        .iter()
+                        .filter(|p| p.name == f.0)
+                        .exactly_one()
+                        .unwrap()
+                        .clone();
+                    let to_p = participants
+                        .iter()
+                        .filter(|p| p.name == t.0)
+                        .exactly_one()
+                        .unwrap()
+                        .clone();
+
                     Interaction {
-                        index: participants
-                            .iter()
-                            .filter(|p| p.name == f.0)
-                            .exactly_one()
-                            .unwrap()
-                            .index as u32,
-                        from_participant: participants
-                            .iter()
-                            .filter(|p| p.name == f.0)
-                            .exactly_one()
-                            .unwrap()
-                            .clone(),
-                        to_participant: participants
-                            .iter()
-                            .filter(|p| p.name == t.0)
-                            .exactly_one()
-                            .unwrap()
-                            .clone(),
-                        interaction_type: InteractionType::L2R,
+                        index: interaction_index.fetch_add(1, Ordering::Relaxed),
+                        from_participant: from_p.clone(),
+                        to_participant: to_p.clone(),
+                        interaction_type: InteractionParser::interaction_type(&from_p, &to_p),
                         message: Some(Message(m.0.to_string())),
                     }
                 }

@@ -45,8 +45,8 @@ pub struct Participant {
 #[derive(Debug)]
 pub enum InteractionType {
     L2R,
-    // R2L,
-    // SELF,
+    R2L,
+    SelfRef,
 }
 
 // == Interaction =========================================
