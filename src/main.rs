@@ -23,9 +23,7 @@ fn main() {
 
     // diagram.save_png("example.png");
 
-    let parser = v3::parsing::DocumentParser::default();
-
-    let diagram = parser.parse(get_text());
+    let diagram = v3::parsing::DocumentParser::parse(get_text());
     info!("Document: {:#?}", diagram);
 
     let diagram_parser = v3::diagram::Diagram::parse(&diagram);
