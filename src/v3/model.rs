@@ -36,9 +36,9 @@ pub struct Header {}
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Participant {
     pub name: String,
-    pub index: usize,
-    pub active_from: i32,
-    pub active_to: i32,
+    pub index: u32,
+    pub active_from: u32,
+    pub active_to: u32,
 }
 
 // == Interaction Type ====================================

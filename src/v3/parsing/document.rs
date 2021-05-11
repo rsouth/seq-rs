@@ -18,35 +18,37 @@ lazy_static! {
 pub struct DocumentParser;
 impl DocumentParser {
     pub fn parse(line: &str) -> Vec<Line> {
-        let line_number = AtomicU32::new(0);
+        let atomic_line_number = AtomicU32::new(0);
         line.lines()
             .into_iter()
             .map(|line| line.trim())
             .map(|line| {
+                let line_number = atomic_line_number.fetch_add(1, Relaxed);
+                let line_data = line.to_owned();
                 if line.is_empty() {
                     Line {
-                        line_number: line_number.fetch_add(1, Relaxed),
+                        line_number,
+                        line_data,
                         line_contents: LineContents::Empty,
-                        line_data: line.to_owned(),
                     }
                 } else if line.starts_with('#') {
                     Line {
-                        line_number: line_number.fetch_add(1, Relaxed),
+                        line_number,
+                        line_data,
                         line_contents: LineContents::Comment,
-                        line_data: line.to_owned(),
                     }
                 } else if line.starts_with(':') {
                     Line {
-                        line_number: line_number.fetch_add(1, Relaxed),
+                        line_number,
+                        line_data,
                         line_contents: LineContents::MetaData,
-                        line_data: line.to_owned(),
                     }
                 } else {
                     match INTERACTION_REGEX.captures(line) {
                         None => Line {
-                            line_number: line_number.fetch_add(1, Relaxed),
+                            line_number,
+                            line_data,
                             line_contents: LineContents::Invalid,
-                            line_data: line.to_owned(),
                         },
                         Some(captures) => {
                             let from_name = FromParticipant(captures.index(1).trim().to_owned());
@@ -55,17 +57,17 @@ impl DocumentParser {
                             if captures.len() >= 3 && !captures.index(3).is_empty() {
                                 let msg = InteractionMessage(captures.index(3).trim().to_owned());
                                 Line {
-                                    line_number: line_number.fetch_add(1, Relaxed),
+                                    line_number,
+                                    line_data,
                                     line_contents: LineContents::InteractionWithMessage(
                                         from_name, to_name, msg,
                                     ),
-                                    line_data: line.to_owned(),
                                 }
                             } else {
                                 Line {
-                                    line_number: line_number.fetch_add(1, Relaxed),
+                                    line_number,
+                                    line_data,
                                     line_contents: LineContents::Interaction(from_name, to_name),
-                                    line_data: line.to_owned(),
                                 }
                             }
                         }

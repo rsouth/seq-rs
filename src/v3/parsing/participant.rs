@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::atomic::{AtomicI32, Ordering},
+    sync::atomic::{AtomicU32, Ordering},
 };
 
 use Ordering::Relaxed;
@@ -28,11 +28,11 @@ impl ParticipantParser {
     /// note down the last appearange of a Participant
     ///  -> this is it's activation_end
     pub fn parse(document: &[Line]) -> ParticipantSet {
-        let p_idx = AtomicI32::new(0);
-        let i_idx = AtomicI32::new(0);
-        let mut idx_for_p: HashMap<String, i32> = HashMap::new();
-        let mut start_idx_for_p: HashMap<String, i32> = HashMap::new();
-        let mut end_idx_for_p: HashMap<String, i32> = HashMap::new();
+        let p_idx = AtomicU32::new(0);
+        let i_idx = AtomicU32::new(0);
+        let mut idx_for_p: HashMap<String, u32> = HashMap::new();
+        let mut start_idx_for_p: HashMap<String, u32> = HashMap::new();
+        let mut end_idx_for_p: HashMap<String, u32> = HashMap::new();
 
         document
             .iter()
@@ -88,7 +88,7 @@ impl ParticipantParser {
                 let name = p_name.0.to_owned();
                 Participant {
                     name: name.clone(),
-                    index: *p_name.1 as usize,
+                    index: *p_name.1,
                     active_from: *start_idx_for_p.get(&name).unwrap(),
                     active_to: *end_idx_for_p.get(&name).unwrap(),
                 }
