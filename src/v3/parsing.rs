@@ -33,6 +33,12 @@ impl DocumentParser {
                         line_contents: LineContents::Nothing,
                         line_data: line.to_string(),
                     }
+                } else if line.starts_with(':') {
+                    Line {
+                        line_number: line_number.fetch_add(1, Ordering::Relaxed),
+                        line_contents: LineContents::MetaData,
+                        line_data: line.to_string(),
+                    }
                 } else {
                     match INTERACTION_REGEX.captures(line) {
                         None => Line {

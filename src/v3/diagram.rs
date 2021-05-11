@@ -27,7 +27,7 @@ impl Diagram {
 #[test]
 fn test_parse_diagram() {
     use crate::v3::model::LineContents;
-    let mut diagram: Vec<Line> = vec![Line {
+    let diagram: Vec<Line> = vec![Line {
         line_number: 0,
         line_contents: LineContents::Invalid,
         line_data: "Test".to_string(),
