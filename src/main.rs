@@ -4,7 +4,7 @@ extern crate pretty_env_logger;
 
 use std::time::Instant;
 
-use sequencer::v3;
+use sequencer::v3::{self, parsing::document::DocumentParser};
 
 fn main() {
     pretty_env_logger::init();
@@ -23,7 +23,7 @@ fn main() {
 
     // diagram.save_png("example.png");
 
-    let document = v3::parsing::DocumentParser::parse(get_text());
+    let document = DocumentParser::parse(get_text());
     info!("Document: {:#?}", document);
 
     let diagram_parser = v3::diagram::Diagram::parse(&document);

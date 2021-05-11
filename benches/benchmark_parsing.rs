@@ -1,7 +1,9 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use itertools::Itertools;
 
-use sequencer::v3::parsing::{DocumentParser, InteractionParser, ParticipantParser};
+use sequencer::v3::parsing::{
+    document::DocumentParser, interaction::InteractionParser, participant::ParticipantParser,
+};
 
 pub fn get_text_vec() -> Vec<&'static str> {
     get_text().lines().collect_vec()

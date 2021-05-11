@@ -1,8 +1,8 @@
 use crate::v3::{
     model::{Header, Line},
-    parsing::ParticipantParser,
+    parsing::participant::ParticipantParser,
 };
-use crate::v3::{parsing::InteractionParser, theme::Theme};
+use crate::v3::{parsing::interaction::InteractionParser, theme::Theme};
 use crate::v3::{InteractionSet, ParticipantSet};
 
 // == Diagram =============================================
