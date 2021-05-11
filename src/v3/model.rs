@@ -17,9 +17,16 @@ pub enum LineContents {
     Empty,
     Comment,
     MetaData,
-    Interaction,
-    InteractionWithMessage,
+    Interaction(FromParticipant, ToParticipant),
+    InteractionWithMessage(FromParticipant, ToParticipant, InteractionMessage),
 }
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FromParticipant(pub String);
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ToParticipant(pub String);
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct InteractionMessage(pub String);
 
 // == Header ==============================================
 #[derive(Debug)]

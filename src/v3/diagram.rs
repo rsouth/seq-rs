@@ -11,6 +11,7 @@ pub struct Diagram {
     participants: ParticipantSet,
 }
 
+#[allow(dead_code)]
 impl Diagram {
     pub fn parse(_document: &[Line]) -> Diagram {
         println!("Document: {:?}", _document);
