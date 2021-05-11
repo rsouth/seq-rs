@@ -17,11 +17,9 @@ pub struct Diagram {
 impl Diagram {
     pub fn parse(document: &[Line]) -> Diagram {
         info!("Document: {:?}", document);
-
         let participants = ParticipantParser::parse(document);
 
         info!("Got Partics: {:#?}", participants);
-
         let interactions = InteractionParser::parse(document, &participants);
 
         Diagram {

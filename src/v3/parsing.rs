@@ -417,7 +417,6 @@ fn test_participant_parser() {
 #[derive(Debug)]
 pub struct InteractionParser;
 
-#[allow(dead_code)]
 impl InteractionParser {
     fn interaction_type(f: &Participant, t: &Participant) -> InteractionType {
         match f.index.cmp(&t.index) {
@@ -427,7 +426,6 @@ impl InteractionParser {
         }
     }
 
-    // todo Pass #2 - interactions
     // iterate lines, looking only at Interaction types
     // note if an interaction is L2R, R2L, SelfRef etc.
     // note if an interaction is Message vs Reply
@@ -448,18 +446,8 @@ impl InteractionParser {
                 LineContents::Interaction(f, t) => {
                     info!("I: {:?}, {:?}", f, t);
 
-                    let from_p = participants
-                        .iter()
-                        .filter(|p| p.name == f.0)
-                        .exactly_one()
-                        .unwrap()
-                        .clone();
-                    let to_p = participants
-                        .iter()
-                        .filter(|p| p.name == t.0)
-                        .exactly_one()
-                        .unwrap()
-                        .clone();
+                    let from_p = participants.iter().find(|p| p.name == f.0).unwrap();
+                    let to_p = participants.iter().find(|p| p.name == t.0).unwrap();
 
                     Interaction {
                         index: interaction_index.fetch_add(1, Ordering::Relaxed),
@@ -472,18 +460,8 @@ impl InteractionParser {
                 LineContents::InteractionWithMessage(f, t, m) => {
                     info!("IwM: {:?}, {:?}, {:?}", f, t, m);
 
-                    let from_p = participants
-                        .iter()
-                        .filter(|p| p.name == f.0)
-                        .exactly_one()
-                        .unwrap()
-                        .clone();
-                    let to_p = participants
-                        .iter()
-                        .filter(|p| p.name == t.0)
-                        .exactly_one()
-                        .unwrap()
-                        .clone();
+                    let from_p = participants.iter().find(|p| p.name == f.0).unwrap();
+                    let to_p = participants.iter().find(|p| p.name == t.0).unwrap();
 
                     Interaction {
                         index: interaction_index.fetch_add(1, Ordering::Relaxed),
