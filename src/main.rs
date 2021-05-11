@@ -26,8 +26,10 @@ fn main() {
     let parser = v3::parsing::DocumentParser::default();
 
     let diagram = parser.parse(get_text());
+    info!("Document: {:#?}", diagram);
 
-    info!("Diagram: {:#?}", diagram);
+    let diagram_parser = v3::diagram::Diagram::parse(&diagram);
+    info!("Diagram: {:#?}", diagram_parser);
 
     info!(
         "Finished in {} micros ({}ms)",

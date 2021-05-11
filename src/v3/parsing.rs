@@ -33,45 +33,45 @@ impl DocumentParser {
                     Line {
                         line_number: line_number.fetch_add(1, Ordering::Relaxed),
                         line_contents: LineContents::Empty,
-                        line_data: line.to_string(),
+                        line_data: line.to_owned(),
                     }
                 } else if line.starts_with('#') {
                     Line {
                         line_number: line_number.fetch_add(1, Ordering::Relaxed),
                         line_contents: LineContents::Comment,
-                        line_data: line.to_string(),
+                        line_data: line.to_owned(),
                     }
                 } else if line.starts_with(':') {
                     Line {
                         line_number: line_number.fetch_add(1, Ordering::Relaxed),
                         line_contents: LineContents::MetaData,
-                        line_data: line.to_string(),
+                        line_data: line.to_owned(),
                     }
                 } else {
                     match INTERACTION_REGEX.captures(line) {
                         None => Line {
                             line_number: line_number.fetch_add(1, Ordering::Relaxed),
                             line_contents: LineContents::Invalid,
-                            line_data: line.to_string(),
+                            line_data: line.to_owned(),
                         },
                         Some(captures) => {
-                            let from_name = FromParticipant(captures.index(1).trim().to_string());
-                            let to_name = ToParticipant(captures.index(2).trim().to_string());
+                            let from_name = FromParticipant(captures.index(1).trim().to_owned());
+                            let to_name = ToParticipant(captures.index(2).trim().to_owned());
 
                             if captures.len() >= 3 && !captures.index(3).is_empty() {
-                                let msg = InteractionMessage(captures.index(3).trim().to_string());
+                                let msg = InteractionMessage(captures.index(3).trim().to_owned());
                                 Line {
                                     line_number: line_number.fetch_add(1, Ordering::Relaxed),
                                     line_contents: LineContents::InteractionWithMessage(
                                         from_name, to_name, msg,
                                     ),
-                                    line_data: line.to_string(),
+                                    line_data: line.to_owned(),
                                 }
                             } else {
                                 Line {
                                     line_number: line_number.fetch_add(1, Ordering::Relaxed),
                                     line_contents: LineContents::Interaction(from_name, to_name),
-                                    line_data: line.to_string(),
+                                    line_data: line.to_owned(),
                                 }
                             }
                         }
@@ -166,15 +166,11 @@ fn test_document_parser() {
 
 // == Participant Parser ==================================
 #[derive(Debug)]
-pub struct ParticipantParser {
-    // participants: HashMap<String, Participant>,
-}
+pub struct ParticipantParser;
 
 impl Default for ParticipantParser {
     fn default() -> Self {
-        ParticipantParser {
-            // participants: Default::default(),
-        }
+        ParticipantParser {}
     }
 }
 

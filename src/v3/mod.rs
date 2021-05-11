@@ -1,6 +1,6 @@
 use model::{Interaction, Participant};
 
-mod diagram;
+pub mod diagram;
 mod model;
 pub mod parsing;
 mod theme;
