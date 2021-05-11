@@ -30,7 +30,7 @@ impl DocumentParser {
                 if line.is_empty() {
                     Line {
                         line_number: line_number.fetch_add(1, Ordering::Relaxed),
-                        line_contents: LineContents::Nothing,
+                        line_contents: LineContents::Empty,
                         line_data: line.to_string(),
                     }
                 } else if line.starts_with(':') {
@@ -69,34 +69,62 @@ impl DocumentParser {
 }
 
 #[test]
+fn test_document_parser_with_invalid() {
+    let text = "    Client -> Server: Message
+    Server
+    -> Server: Response";
+    let parser = DocumentParser::default();
+    let vec = parser.parse(text);
+    assert_eq!(3, vec.len());
+
+    // line 0
+    assert_eq!(0, vec[0].line_number);
+    assert_eq!(LineContents::InteractionWithMessage, vec[0].line_contents);
+
+    // line 1
+    assert_eq!(1, vec[1].line_number);
+    assert_eq!(LineContents::Invalid, vec[1].line_contents);
+
+    // line 2
+    assert_eq!(2, vec[2].line_number);
+    assert_eq!(LineContents::Invalid, vec[2].line_contents);
+}
+
+#[test]
 fn test_document_parser() {
     let text = "
+    :title Test
     Client -> Server: Message
     Server -> Database
     Database -> Server: Response";
     let parser = DocumentParser::default();
     let vec = parser.parse(text);
-    assert_eq!(4, vec.len());
+    assert_eq!(5, vec.len());
 
     // line 0
     assert_eq!(0, vec[0].line_number);
-    assert_eq!(LineContents::Nothing, vec[0].line_contents);
+    assert_eq!(LineContents::Empty, vec[0].line_contents);
     assert_eq!("", vec[0].line_data);
 
     // line 1
     assert_eq!(1, vec[1].line_number);
-    assert_eq!(LineContents::InteractionWithMessage, vec[1].line_contents);
-    assert_eq!("Client -> Server: Message", vec[1].line_data);
+    assert_eq!(LineContents::MetaData, vec[1].line_contents);
+    assert_eq!(":title Test", vec[1].line_data);
 
     // line 2
     assert_eq!(2, vec[2].line_number);
-    assert_eq!(LineContents::Interaction, vec[2].line_contents);
-    assert_eq!("Server -> Database", vec[2].line_data);
+    assert_eq!(LineContents::InteractionWithMessage, vec[2].line_contents);
+    assert_eq!("Client -> Server: Message", vec[2].line_data);
 
     // line 3
     assert_eq!(3, vec[3].line_number);
-    assert_eq!(LineContents::InteractionWithMessage, vec[3].line_contents);
-    assert_eq!("Database -> Server: Response", vec[3].line_data);
+    assert_eq!(LineContents::Interaction, vec[3].line_contents);
+    assert_eq!("Server -> Database", vec[3].line_data);
+
+    // line 4
+    assert_eq!(4, vec[4].line_number);
+    assert_eq!(LineContents::InteractionWithMessage, vec[4].line_contents);
+    assert_eq!("Database -> Server: Response", vec[4].line_data);
 }
 
 // == Participant Parser ==================================

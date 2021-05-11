@@ -14,7 +14,7 @@ pub struct Line {
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum LineContents {
     Invalid,
-    Nothing,
+    Empty,
     Comment,
     MetaData,
     Interaction,
