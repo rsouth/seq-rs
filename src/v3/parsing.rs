@@ -9,8 +9,11 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use Ordering::Relaxed;
 
-use crate::v3::model::{Interaction, InteractionType, Line, LineContents, Message, Participant};
 use crate::v3::InteractionSet;
+use crate::v3::{
+    model::{Interaction, InteractionType, Line, LineContents, Message, Participant},
+    ParticipantSet,
+};
 
 use super::model::{FromParticipant, InteractionMessage, ToParticipant};
 
@@ -177,7 +180,7 @@ impl ParticipantParser {
     ///  -> this is it's index, and it's activation_start
     /// note down the last appearange of a Participant
     ///  -> this is it's activation_end
-    pub fn parse(document: &[Line]) -> HashSet<Participant> {
+    pub fn parse(document: &[Line]) -> ParticipantSet {
         let p_idx = AtomicI32::new(0);
         let i_idx = AtomicI32::new(0);
         let mut idx_for_p: HashMap<String, i32> = HashMap::new();
@@ -243,7 +246,7 @@ impl ParticipantParser {
                     active_to: *end_idx_for_p.get(&name).unwrap(),
                 }
             })
-            .collect::<HashSet<Participant>>()
+            .collect::<ParticipantSet>()
     }
 }
 

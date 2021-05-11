@@ -1,5 +1,3 @@
-use itertools::Itertools;
-
 use crate::v3::{
     model::{Header, Line},
     parsing::ParticipantParser,
@@ -24,13 +22,13 @@ impl Diagram {
 
         info!("Got Partics: {:#?}", participants);
 
-        let _interactions = InteractionParser::parse(document, &participants);
+        let interactions = InteractionParser::parse(document, &participants);
 
         Diagram {
             theme: Default::default(),
             header: Header {},
-            interactions: _interactions,
-            participants: participants.into_iter().collect_vec(),
+            interactions,
+            participants,
         }
     }
 }

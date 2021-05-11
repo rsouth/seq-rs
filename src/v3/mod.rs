@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use model::{Interaction, Participant};
 
 pub mod diagram;
@@ -6,4 +8,4 @@ pub mod parsing;
 mod theme;
 
 type InteractionSet = Vec<Interaction>;
-type ParticipantSet = Vec<Participant>;
+type ParticipantSet = HashSet<Participant>;
