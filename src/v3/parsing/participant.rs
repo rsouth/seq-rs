@@ -28,11 +28,11 @@ impl ParticipantParser {
     /// note down the last appearange of a Participant
     ///  -> this is it's activation_end
     pub fn parse(document: &[Line]) -> ParticipantSet {
-        let p_idx = AtomicU32::new(0);
-        let i_idx = AtomicU32::new(0);
-        let mut idx_for_p: HashMap<String, u32> = HashMap::new();
-        let mut start_idx_for_p: HashMap<String, u32> = HashMap::new();
-        let mut end_idx_for_p: HashMap<String, u32> = HashMap::new();
+        let current_participant_index = AtomicU32::new(0);
+        let current_interaction_index = AtomicU32::new(0);
+        let mut participant_indices: HashMap<String, u32> = HashMap::new();
+        let mut first_index_for_participant: HashMap<String, u32> = HashMap::new();
+        let mut last_index_for_participant: HashMap<String, u32> = HashMap::new();
 
         document
             .iter()
@@ -44,54 +44,65 @@ impl ParticipantParser {
             })
             .for_each(|line| {
                 info!("Pass 1: {:#?}", line);
-                match &line.line_contents {
-                    LineContents::Interaction(f, t)
-                    | LineContents::InteractionWithMessage(f, t, _) => {
-                        // participant index
-                        if !idx_for_p.contains_key(&f.0) {
-                            idx_for_p.insert(f.0.to_string(), p_idx.fetch_add(1, Relaxed));
-                        }
 
-                        if !idx_for_p.contains_key(&t.0) {
-                            idx_for_p.insert(t.0.to_string(), p_idx.fetch_add(1, Relaxed));
-                        }
-
-                        // active start index
-                        if !start_idx_for_p.contains_key(&f.0) {
-                            start_idx_for_p.insert(f.0.to_string(), i_idx.load(Relaxed));
-                        }
-
-                        if !start_idx_for_p.contains_key(&t.0) {
-                            start_idx_for_p.insert(t.0.to_string(), i_idx.load(Relaxed));
-                        }
-
-                        // active end index
-                        end_idx_for_p.insert(f.0.to_string(), i_idx.load(Relaxed));
-                        end_idx_for_p.insert(t.0.to_string(), i_idx.load(Relaxed));
-                    }
+                let (f, t) = match &line.line_contents {
+                    LineContents::Interaction(f, t) => (f, t),
+                    LineContents::InteractionWithMessage(f, t, _) => (f, t),
                     _ => {
                         panic!("...");
                     }
+                };
+
+                // participant index
+                if !participant_indices.contains_key(&f.0) {
+                    participant_indices.insert(
+                        f.0.to_string(),
+                        current_participant_index.fetch_add(1, Relaxed),
+                    );
                 }
 
-                i_idx.fetch_add(1, Relaxed);
+                if !participant_indices.contains_key(&t.0) {
+                    participant_indices.insert(
+                        t.0.to_string(),
+                        current_participant_index.fetch_add(1, Relaxed),
+                    );
+                }
+
+                // active start index
+                if !first_index_for_participant.contains_key(&f.0) {
+                    first_index_for_participant
+                        .insert(f.0.to_string(), current_interaction_index.load(Relaxed));
+                }
+
+                if !first_index_for_participant.contains_key(&t.0) {
+                    first_index_for_participant
+                        .insert(t.0.to_string(), current_interaction_index.load(Relaxed));
+                }
+
+                // active end index
+                last_index_for_participant
+                    .insert(f.0.to_string(), current_interaction_index.load(Relaxed));
+                last_index_for_participant
+                    .insert(t.0.to_string(), current_interaction_index.load(Relaxed));
+
+                current_interaction_index.fetch_add(1, Relaxed);
             });
 
         info!("After first pass:");
-        info!("Participant idx: {:#?}", idx_for_p);
-        info!("Participant active from: {:#?}", start_idx_for_p);
-        info!("Participant active to: {:#?}", end_idx_for_p);
+        info!("Participant idx: {:#?}", participant_indices);
+        info!(
+            "Participant active from: {:#?}",
+            first_index_for_participant
+        );
+        info!("Participant active to: {:#?}", last_index_for_participant);
 
-        idx_for_p
+        participant_indices
             .iter()
-            .map(|p_name| {
-                let name = p_name.0.to_owned();
-                Participant {
-                    name: name.clone(),
-                    index: *p_name.1,
-                    active_from: *start_idx_for_p.get(&name).unwrap(),
-                    active_to: *end_idx_for_p.get(&name).unwrap(),
-                }
+            .map(|p_name| Participant {
+                active_from: *first_index_for_participant.get(p_name.0).unwrap(),
+                active_to: *last_index_for_participant.get(p_name.0).unwrap(),
+                name: p_name.0.to_owned(),
+                index: *p_name.1,
             })
             .collect::<ParticipantSet>()
     }
