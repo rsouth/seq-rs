@@ -4,11 +4,11 @@ use fontdue::Font;
 // == Theme ===============================================
 #[derive(Debug)]
 pub struct Theme {
-    title_font: Font,
-    body_font: Font,
-    title_font_px: f32,
-    partic_font_px: f32,
-    message_font_px: f32,
+    pub title_font: Font,
+    pub body_font: Font,
+    pub title_font_px: f32,
+    pub partic_font_px: f32,
+    pub message_font_px: f32,
 }
 
 impl Default for Theme {

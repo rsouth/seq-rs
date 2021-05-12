@@ -8,10 +8,10 @@ use crate::v3::{InteractionSet, ParticipantSet};
 // == Diagram =============================================
 #[derive(Debug)]
 pub struct Diagram {
-    theme: Theme,
-    header: Header,
-    interactions: InteractionSet,
-    participants: ParticipantSet,
+    pub theme: Theme,
+    pub header: Header,
+    pub interactions: InteractionSet,
+    pub participants: ParticipantSet,
 }
 
 impl Diagram {

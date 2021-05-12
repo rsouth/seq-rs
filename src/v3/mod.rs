@@ -3,9 +3,10 @@ use std::collections::HashSet;
 use model::{Interaction, Participant};
 
 pub mod diagram;
-mod model;
+pub mod model;
 pub mod parsing;
-mod theme;
+pub mod rendering;
+pub mod theme;
 
 type InteractionSet = Vec<Interaction>;
 type ParticipantSet = HashSet<Participant>;

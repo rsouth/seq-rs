@@ -4,7 +4,7 @@ extern crate pretty_env_logger;
 
 use std::time::Instant;
 
-use sequencer::v3::{self, parsing::document::DocumentParser};
+use sequencer::v3::{self, parsing::document::DocumentParser, theme::Theme};
 
 fn main() {
     pretty_env_logger::init();
@@ -26,8 +26,11 @@ fn main() {
     let document = DocumentParser::parse(get_text());
     info!("Document: {:#?}", document);
 
-    let diagram_parser = v3::diagram::Diagram::parse(&document);
-    info!("Diagram: {:#?}", diagram_parser);
+    let diagram = v3::diagram::Diagram::parse(&document);
+    info!("Diagram: {:#?}", diagram);
+
+    let theme = Theme::default();
+    diagram.render(theme);
 
     info!(
         "Finished in {} micros ({}ms)",
