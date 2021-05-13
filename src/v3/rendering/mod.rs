@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use raqote::{Color, DrawOptions, DrawTarget, PathBuilder, SolidSource, Source, StrokeStyle};
+use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source, StrokeStyle};
 
 use crate::v3::rendering::text::{draw_text, measure_text_v3000};
 
@@ -13,14 +13,14 @@ pub trait RenderSet {
 
 pub struct Rect {
     x: f32,
-    y: f32,
+    _y: f32,
     w: f32,
-    h: f32,
+    _h: f32,
 }
 
 impl Rect {
     fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
-        Rect { x, y, w, h }
+        Rect { x, _y: y, w, _h: h }
     }
 }
 
@@ -83,16 +83,11 @@ impl Sizable for Diagram {
             .participants
             .iter()
             .map(|p| measure_text_v3000(_theme, &p.name, _theme.partic_font_px))
-            .fold(
-                Size {
-                    height: 0,
-                    width: 0,
-                },
-                |a, x| Size {
-                    width: a.width + x.width,
-                    height: a.height + x.height,
-                },
-            );
+            .reduce(|a, x| Size {
+                width: a.width + x.width,
+                height: a.height + x.height,
+            })
+            .unwrap();
         let width = 10 + w.width + ((self.participants.len() as i32 - 1) * 10) + 10;
 
         Size { height, width }
@@ -108,12 +103,18 @@ impl RenderContext {
     fn new(size: Size, theme: Theme) -> Self {
         let mut draw_target = DrawTarget::new(size.width, size.height);
         draw_target.clear(SolidSource::from_unpremultiplied_argb(255, 255, 255, 255));
-        RenderContext { draw_target, theme }
+        RenderContext { theme, draw_target }
     }
 }
 
 pub trait Sizable {
     fn size(&self, theme: &Theme) -> Size;
+}
+
+pub struct SizeBuilder {
+    last_x: i32,
+    width: i32,
+    height: i32,
 }
 
 pub struct Size {

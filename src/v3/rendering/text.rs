@@ -1,18 +1,10 @@
-use itertools::Itertools;
-use raqote::Point;
-use smallvec::SmallVec;
+use std::cmp::max;
 
-// use crate::v2::rendering::render_context::RenderingContext;
-// use crate::v2::{Interaction, Participant};
 use fontdue::layout::{CoordinateSystem, Layout, LayoutSettings, TextStyle};
-use fontdue::Font;
 
-use crate::v3::{
-    model::{Interaction, Participant},
-    theme::Theme,
-};
+use crate::v3::theme::Theme;
 
-use super::{RenderContext, Size};
+use super::{RenderContext, Size, SizeBuilder};
 
 pub fn measure_text_v3000(theme: &Theme, content: &str, px: f32) -> Size {
     let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
@@ -23,27 +15,30 @@ pub fn measure_text_v3000(theme: &Theme, content: &str, px: f32) -> Size {
     });
     let font = &theme.body_font;
     layout.append(&[font], &TextStyle::new(&content, px, 0));
-    layout
+    let size = layout
         .glyphs()
         .iter()
         .map(|p| {
             let (metrics, _) = font.rasterize(p.key.c, px);
             metrics
         })
-        .map(|p| Size {
-            height: p.bounds.height as i32,
-            width: p.bounds.width as i32,
-        })
         .fold(
-            Size {
+            SizeBuilder {
+                last_x: 0,
                 width: 0,
                 height: 0,
             },
-            |p, x| Size {
-                width: p.width + x.width,
-                height: p.height + x.height,
+            |p, x| SizeBuilder {
+                last_x: x.xmin,
+                width: p.width + x.width as i32 + (x.xmin - p.last_x),
+                height: max(p.height, x.height as i32) as i32,
             },
-        )
+        );
+
+    Size {
+        height: size.height,
+        width: size.width,
+    }
 }
 
 pub fn draw_text(rc: &mut RenderContext, content: &str, x: f32, y: f32, px: f32) {
