@@ -53,8 +53,6 @@ impl RenderSet for ParticipantSet {
 
 impl Render for Participant {
     fn render(&self, context: &mut RenderContext, x: f32, y: f32) -> Rect {
-        draw_text(context, &self.name, x, y, context.theme.partic_font_px);
-
         let mut path = PathBuilder::new();
         let boundary = measure_text_v3000(&context.theme, &self.name, context.theme.partic_font_px);
         path.rect(x, y, boundary.width as f32, boundary.height as f32);
@@ -64,6 +62,8 @@ impl Render for Participant {
             &StrokeStyle::default(),
             &DrawOptions::default(),
         );
+
+        draw_text(context, &self.name, x, y, context.theme.partic_font_px);
 
         info!(
             "Drawing box for {} x: {}, y: {}, w: {}, h: {}",

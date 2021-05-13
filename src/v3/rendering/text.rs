@@ -15,25 +15,18 @@ pub fn measure_text_v3000(theme: &Theme, content: &str, px: f32) -> Size {
     });
     let font = &theme.body_font;
     layout.append(&[font], &TextStyle::new(&content, px, 0));
-    let size = layout
-        .glyphs()
-        .iter()
-        .map(|p| {
-            let (metrics, _) = font.rasterize(p.key.c, px);
-            metrics
-        })
-        .fold(
-            SizeBuilder {
-                last_x: 0,
-                width: 0,
-                height: 0,
-            },
-            |p, x| SizeBuilder {
-                last_x: x.xmin,
-                width: p.width + x.width as i32 + (x.xmin - p.last_x),
-                height: max(p.height, x.height as i32) as i32,
-            },
-        );
+    let size = layout.glyphs().iter().fold(
+        SizeBuilder {
+            last_x: 0,
+            width: 0,
+            height: 0,
+        },
+        |p, x| SizeBuilder {
+            last_x: x.x as i32,
+            width: p.width + x.width as i32 + (x.x as i32 - p.last_x as i32),
+            height: max(p.height, x.height as i32) as i32,
+        },
+    );
 
     Size {
         height: size.height,
