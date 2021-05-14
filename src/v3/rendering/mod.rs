@@ -13,14 +13,14 @@ pub trait RenderSet {
 
 pub struct Rect {
     x: f32,
-    _y: f32,
+    y: f32,
     w: f32,
-    _h: f32,
+    h: f32,
 }
 
 impl Rect {
     fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
-        Rect { x, _y: y, w, _h: h }
+        Rect { x, y, w, h }
     }
 }
 
@@ -57,9 +57,9 @@ impl Render for Participant {
         let boundary = measure_text_v3000(&context.theme, &self.name, context.theme.partic_font_px);
         path.rect(
             x + boundary.x,
-            y + boundary._y,
+            y + boundary.y,
             boundary.w as f32,
-            boundary._h as f32,
+            boundary.h as f32,
         );
         context.draw_target.stroke(
             &path.finish(),
@@ -72,10 +72,10 @@ impl Render for Participant {
 
         info!(
             "Drawing box for {} x: {}, y: {}, w: {}, h: {}",
-            self.name, x, y, boundary.w, boundary._h
+            self.name, x, y, boundary.w, boundary.h
         );
 
-        Rect::new(x, y, boundary.w as f32, boundary._h as f32)
+        Rect::new(x, y, boundary.w as f32, boundary.h as f32)
     }
 }
 
@@ -95,7 +95,7 @@ impl Sizable for Diagram {
                 },
                 |a, x| Size {
                     width: a.width + x.w as i32,
-                    height: a.height + x._h as i32,
+                    height: a.height + x.h as i32,
                 },
             );
         let width = 10 + w.width + ((self.participants.len() as i32 - 1) * 10) + 10;

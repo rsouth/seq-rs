@@ -20,9 +20,9 @@ pub fn measure_text_v3000(theme: &Theme, content: &str, px: f32) -> Rect {
     let lst = layout.last().unwrap();
     Rect {
         x: fst.x, //layout.iter().map(|p| p.x),
-        _y: layout.iter().map(|p| p.y as i32).min().unwrap() as f32,
+        y: layout.iter().map(|p| p.y as i32).min().unwrap() as f32,
         w: (fst.x + lst.x + lst.width as f32),
-        _h: layout.iter().map(|p| p.height).max().unwrap() as f32,
+        h: layout.iter().map(|p| p.height).max().unwrap() as f32,
     }
 }
 
@@ -92,13 +92,13 @@ fn test_measure_text() {
     let theme = Theme::default();
     let size = measure_text_v3000(&theme, "A", 20_f32);
     assert_eq!(0.0, size.x);
-    assert_eq!(5.0, size._y);
+    assert_eq!(5.0, size.y);
     assert_eq!(12.0, size.w);
-    assert_eq!(15.0, size._h);
+    assert_eq!(15.0, size.h);
 
     let size = measure_text_v3000(&theme, "AA", 20_f32);
     assert_eq!(0.0, size.x);
-    assert_eq!(5.0, size._y);
+    assert_eq!(5.0, size.y);
     assert_eq!(24.0, size.w);
-    assert_eq!(15.0, size._h);
+    assert_eq!(15.0, size.h);
 }

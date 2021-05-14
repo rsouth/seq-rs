@@ -42,7 +42,7 @@ pub struct Participant {
 }
 
 // == Interaction Type ====================================
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum InteractionType {
     L2R,
     R2L,
