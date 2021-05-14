@@ -1,12 +1,11 @@
-use std::cmp::max;
-
 use fontdue::layout::{CoordinateSystem, Layout, LayoutSettings, TextStyle};
+use raqote::{DrawOptions, PathBuilder, SolidSource, Source, StrokeStyle};
 
 use crate::v3::theme::Theme;
 
-use super::{RenderContext, Size, SizeBuilder};
+use super::{Rect, RenderContext};
 
-pub fn measure_text_v3000(theme: &Theme, content: &str, px: f32) -> Size {
+pub fn measure_text_v3000(theme: &Theme, content: &str, px: f32) -> Rect {
     let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
     layout.reset(&LayoutSettings {
         x: 0.0,
@@ -15,22 +14,15 @@ pub fn measure_text_v3000(theme: &Theme, content: &str, px: f32) -> Size {
     });
     let font = &theme.body_font;
     layout.append(&[font], &TextStyle::new(&content, px, 0));
-    let size = layout.glyphs().iter().fold(
-        SizeBuilder {
-            last_x: 0,
-            width: 0,
-            height: 0,
-        },
-        |p, x| SizeBuilder {
-            last_x: x.x as i32,
-            width: p.width + x.width as i32 + (x.x as i32 - p.last_x as i32),
-            height: max(p.height, x.height as i32) as i32,
-        },
-    );
 
-    Size {
-        height: size.height,
-        width: size.width,
+    let layout = layout.glyphs();
+    let fst = layout.first().unwrap();
+    let lst = layout.last().unwrap();
+    Rect {
+        x: fst.x, //layout.iter().map(|p| p.x),
+        _y: layout.iter().map(|p| p.y as i32).min().unwrap() as f32,
+        w: (fst.x + lst.x + lst.width as f32),
+        _h: layout.iter().map(|p| p.height).max().unwrap() as f32,
     }
 }
 
@@ -47,6 +39,23 @@ pub fn draw_text(rc: &mut RenderContext, content: &str, x: f32, y: f32, px: f32)
         let (metrics, coverage) = font.rasterize(glyph.key.c, px);
         info!("Metrics: {:?}", glyph);
 
+        //
+        let mut path = PathBuilder::new();
+        path.rect(
+            glyph.x,
+            glyph.y,
+            // y,
+            metrics.width as f32,
+            metrics.height as f32,
+        );
+        rc.draw_target.stroke(
+            &path.finish(),
+            &Source::Solid(SolidSource::from_unpremultiplied_argb(100, 255, 20, 150)),
+            &StrokeStyle::default(),
+            &DrawOptions::default(),
+        );
+
+        //
         let mut image_data = Vec::with_capacity(coverage.len());
         for cov in coverage.iter() {
             let pixel = rgb_to_u32(0, 0, 0, *cov as usize);
@@ -55,6 +64,7 @@ pub fn draw_text(rc: &mut RenderContext, content: &str, x: f32, y: f32, px: f32)
         rc.draw_target.draw_image_at(
             glyph.x,
             glyph.y,
+            // y,
             &raqote::Image {
                 width: metrics.width as i32,
                 height: metrics.height as i32,

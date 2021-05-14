@@ -55,7 +55,12 @@ impl Render for Participant {
     fn render(&self, context: &mut RenderContext, x: f32, y: f32) -> Rect {
         let mut path = PathBuilder::new();
         let boundary = measure_text_v3000(&context.theme, &self.name, context.theme.partic_font_px);
-        path.rect(x, y, boundary.width as f32, boundary.height as f32);
+        path.rect(
+            x + boundary.x,
+            y + boundary._y,
+            boundary.w as f32,
+            boundary._h as f32,
+        );
         context.draw_target.stroke(
             &path.finish(),
             &Source::Solid(SolidSource::from_unpremultiplied_argb(225, 255, 20, 20)),
@@ -67,10 +72,10 @@ impl Render for Participant {
 
         info!(
             "Drawing box for {} x: {}, y: {}, w: {}, h: {}",
-            self.name, x, y, boundary.width, boundary.height
+            self.name, x, y, boundary.w, boundary._h
         );
 
-        Rect::new(x, y, boundary.width as f32, boundary.height as f32)
+        Rect::new(x, y, boundary.w as f32, boundary._h as f32)
     }
 }
 
@@ -83,11 +88,16 @@ impl Sizable for Diagram {
             .participants
             .iter()
             .map(|p| measure_text_v3000(_theme, &p.name, _theme.partic_font_px))
-            .reduce(|a, x| Size {
-                width: a.width + x.width,
-                height: a.height + x.height,
-            })
-            .unwrap();
+            .fold(
+                Size {
+                    height: 0,
+                    width: 0,
+                },
+                |a, x| Size {
+                    width: a.width + x.w as i32,
+                    height: a.height + x._h as i32,
+                },
+            );
         let width = 10 + w.width + ((self.participants.len() as i32 - 1) * 10) + 10;
 
         Size { height, width }
@@ -111,12 +121,7 @@ pub trait Sizable {
     fn size(&self, theme: &Theme) -> Size;
 }
 
-pub struct SizeBuilder {
-    last_x: i32,
-    width: i32,
-    height: i32,
-}
-
+#[derive(Debug)]
 pub struct Size {
     height: i32,
     width: i32,
