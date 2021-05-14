@@ -87,107 +87,18 @@ pub fn rgb_to_u32(red: usize, green: usize, blue: usize, alpha: usize) -> u32 {
     ((a << 24) | (r << 16) | (g << 8) | b) as u32
 }
 
-// todo generify; take a slice of strings rather than an interaction set
-// pub fn measure_all_participants(
-//     font: &Font,
-//     font_size: f32,
-//     interaction_set: &[Interaction],
-// ) -> i32 {
-//     let sum_of_width = interaction_set
-//         .iter()
-//         .map(|p| SmallVec::from_buf([&p.from_participant, &p.to_participant]))
-//         .flatten()
-//         .unique()
-//         .map(|p: &Participant| {
-//             let width = measure_text(font, font_size, &p.name).width;
-//             info!("Width of {} is {}", &p.name, width);
-//             width
-//         })
-//         .sum();
+#[test]
+fn test_measure_text() {
+    let theme = Theme::default();
+    let size = measure_text_v3000(&theme, "A", 20_f32);
+    assert_eq!(0.0, size.x);
+    assert_eq!(5.0, size._y);
+    assert_eq!(12.0, size.w);
+    assert_eq!(15.0, size._h);
 
-//     info!("Full participant width {}", sum_of_width);
-//     sum_of_width
-// }
-
-// pub struct Size {
-//     pub height: i32,
-//     pub width: i32,
-// }
-
-// pub fn measure_text(font: &Font, size: f32, text: &str) -> Size {
-//     let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
-//     layout.reset(&LayoutSettings {
-//         x: 0_f32,
-//         y: 0_f32,
-//         ..LayoutSettings::default()
-//     });
-//     layout.append(&[font], &TextStyle::new(text, size, 0));
-//     let w = layout.glyphs().iter().map(|g| g.width as i32).sum();
-//     let h = layout.glyphs().iter().map(|g| g.height as i32).sum();
-//     // todo merge the above 2 iters
-//     Size {
-//         width: w,
-//         height: h,
-//     }
-// }
-
-// pub fn measure_text(
-//     font: &Font,
-//     point_size: f32,
-//     text: &str,
-// ) -> Result<euclid::Rect<i32, euclid::UnknownUnit>, font_kit::error::GlyphLoadingError> {
-//     measure_glyphs(
-//         font,
-//         point_size,
-//         text.chars().scan(vec2f(0., 0.), |start, c| {
-//             let id = font.glyph_for_char(c).unwrap();
-//             let position = Point::new(start.x(), start.y());
-//             *start += font.advance(id).unwrap() * point_size / 24. / 96.;
-
-//             Some((id, position))
-//         }),
-//     )
-// }
-
-// pub fn measure_glyphs(
-//     font: &Font,
-//     point_size: f32,
-//     glyphs: impl IntoIterator<Item = (u32, Point)>,
-// ) -> Result<euclid::Rect<i32, euclid::UnknownUnit>, font_kit::error::GlyphLoadingError> {
-//     let mut combined_bounds = euclid::Rect::zero();
-//     let tfm = Transform2F::default();
-//     for (id, position) in glyphs.into_iter() {
-//         let bounds = font.raster_bounds(
-//             id,
-//             point_size,
-//             tfm.translate(vec2f(position.x, position.y)),
-//             HintingOptions::None,
-//             RasterizationOptions::SubpixelAa,
-//         );
-//         let bounds = bounds?;
-//         let origin = bounds.origin();
-//         let size = bounds.size();
-//         let bounds = euclid::Rect::new(
-//             Point2D::new(origin.x(), origin.y()),
-//             euclid::Size2D::new(size.x(), size.y()),
-//         );
-//         combined_bounds = combined_bounds.union(&bounds);
-//     }
-
-//     Ok(combined_bounds)
-// }
-
-// #[test]
-// fn test_measure_text() {
-//     use crate::render_context::RenderingContext;
-//     // just testing using 'known good' values incase measuring itself gets broken
-//
-//     let font = RenderingContext::get_font();
-//     let result = measure_text(&font, 20., "A");
-//     assert_eq!(15, result.unwrap().width());
-//     assert_eq!(14, result.unwrap().height());
-//
-//     let result = measure_text(&font, 20., "AA");
-//     assert_eq!(28, result.unwrap().width());
-//     assert_eq!(14, result.unwrap().height());
-// }
+    let size = measure_text_v3000(&theme, "AA", 20_f32);
+    assert_eq!(0.0, size.x);
+    assert_eq!(5.0, size._y);
+    assert_eq!(24.0, size.w);
+    assert_eq!(15.0, size._h);
+}
