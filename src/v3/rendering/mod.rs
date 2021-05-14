@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source, StrokeStyle};
 
-use crate::v3::rendering::text::{draw_text, measure_text_v3000};
+use crate::v3::rendering::text::{draw_text, measure_string};
 
 use super::{diagram::Diagram, model::Participant, theme::Theme, ParticipantSet};
 
@@ -13,14 +13,14 @@ pub trait RenderSet {
 
 pub struct Rect {
     x: f32,
-    y: f32,
+    _y: f32,
     w: f32,
     h: f32,
 }
 
 impl Rect {
     fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
-        Rect { x, y, w, h }
+        Rect { x, _y: y, w, h }
     }
 }
 
@@ -46,7 +46,7 @@ impl RenderSet for ParticipantSet {
         self.iter().sorted_by_key(|k| k.index).for_each(|p| {
             let pos = p.render(context, current_x, 10.0);
 
-            current_x = pos.x + pos.w + 10.0;
+            current_x = pos.x + pos.w + 15.0;
         })
     }
 }
@@ -54,12 +54,12 @@ impl RenderSet for ParticipantSet {
 impl Render for Participant {
     fn render(&self, context: &mut RenderContext, x: f32, y: f32) -> Rect {
         let mut path = PathBuilder::new();
-        let boundary = measure_text_v3000(&context.theme, &self.name, context.theme.partic_font_px);
+        let boundary = measure_string(&context.theme, &self.name, context.theme.partic_font_px);
         path.rect(
-            x + boundary.x,
-            y + boundary.y,
-            boundary.w as f32,
-            boundary.h as f32,
+            x + boundary.x - 5.0,
+            y,
+            boundary.w as f32 + (5.0 * 2.0),
+            boundary.h as f32 + (5.0 * 2.0),
         );
         context.draw_target.stroke(
             &path.finish(),
@@ -87,7 +87,7 @@ impl Sizable for Diagram {
         let w: Size = self
             .participants
             .iter()
-            .map(|p| measure_text_v3000(_theme, &p.name, _theme.partic_font_px))
+            .map(|p| measure_string(_theme, &p.name, _theme.partic_font_px))
             .fold(
                 Size {
                     height: 0,
@@ -98,7 +98,7 @@ impl Sizable for Diagram {
                     height: a.height + x.h as i32,
                 },
             );
-        let width = 10 + w.width + ((self.participants.len() as i32 - 1) * 10) + 10;
+        let width = 10 + w.width + ((self.participants.len() as i32 - 1) * 15) + 10;
 
         Size { height, width }
     }
