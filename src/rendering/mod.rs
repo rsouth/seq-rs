@@ -1,9 +1,10 @@
 use itertools::Itertools;
-use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source, StrokeStyle};
-
-use crate::v3::rendering::text::{draw_text, measure_string};
+use raqote::{
+    DrawOptions, DrawTarget, LineCap, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle,
+};
 
 use super::{diagram::Diagram, model::Participant, theme::Theme, ParticipantSet};
+use crate::rendering::text::{draw_text, measure_string};
 
 mod text;
 
@@ -35,7 +36,10 @@ impl Diagram {
 
         self.participants.render(&mut rendering_context);
 
-        rendering_context.draw_target.write_png("v3.png").unwrap();
+        rendering_context
+            .draw_target
+            .write_png("../../v3.png")
+            .unwrap();
     }
 }
 
@@ -59,12 +63,21 @@ impl Render for Participant {
             x + boundary.x - 5.0,
             y,
             boundary.w as f32 + (5.0 * 2.0),
-            boundary.h as f32 + (5.0 * 2.0),
+            // boundary.h as f32 + (5.0 * 2.0),
+            context.theme.partic_font_px + 5f32,
         );
+
+        let ss = StrokeStyle {
+            width: 0.5,
+            join: LineJoin::Bevel,
+            cap: LineCap::Round,
+            ..StrokeStyle::default()
+        };
+
         context.draw_target.stroke(
             &path.finish(),
             &Source::Solid(SolidSource::from_unpremultiplied_argb(225, 255, 20, 20)),
-            &StrokeStyle::default(),
+            &ss, //&StrokeStyle::default(),
             &DrawOptions::default(),
         );
 

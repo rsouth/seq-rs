@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use crate::v3::model::{Interaction, InteractionType, Line, LineContents, Message, Participant};
-use crate::v3::InteractionSet;
+use crate::model::{Interaction, InteractionType, Line, LineContents, Message, Participant};
+
+use crate::InteractionSet;
 
 // == Interaction Parser ==================================
 #[derive(Debug)]
@@ -44,7 +45,7 @@ impl InteractionParser {
                         index: interaction_index.fetch_add(1, Ordering::Relaxed),
                         from_participant: from_p.clone(),
                         to_participant: to_p.clone(),
-                        interaction_type: InteractionParser::interaction_type(&from_p, &to_p),
+                        interaction_type: InteractionParser::interaction_type(from_p, to_p),
                         message: None,
                     }
                 }
@@ -58,7 +59,7 @@ impl InteractionParser {
                         index: interaction_index.fetch_add(1, Ordering::Relaxed),
                         from_participant: from_p.clone(),
                         to_participant: to_p.clone(),
-                        interaction_type: InteractionParser::interaction_type(&from_p, &to_p),
+                        interaction_type: InteractionParser::interaction_type(from_p, to_p),
                         message: Some(Message(m.0.to_string())),
                     }
                 }
@@ -72,7 +73,7 @@ impl InteractionParser {
 
 #[test]
 fn test_interaction_parser() {
-    use crate::v3::model::{FromParticipant, ToParticipant};
+    use crate::model::{FromParticipant, ToParticipant};
     let document = vec![Line {
         line_contents: LineContents::Interaction(
             FromParticipant("Client".to_owned()),
@@ -107,8 +108,8 @@ fn test_interaction_parser() {
 
 #[test]
 fn test_interaction_parser_with_r2l() {
-    use crate::v3::model::{FromParticipant, ToParticipant};
-    use crate::v3::parsing::participant::ParticipantParser;
+    use crate::model::{FromParticipant, ToParticipant};
+    use crate::parsing::participant::ParticipantParser;
     let document = vec![
         Line {
             line_contents: LineContents::Interaction(
@@ -149,8 +150,8 @@ fn test_interaction_parser_with_r2l() {
 
 #[test]
 fn test_interaction_parser_with_selfref() {
-    use crate::v3::model::{FromParticipant, InteractionMessage, ToParticipant};
-    use crate::v3::parsing::participant::ParticipantParser;
+    use crate::model::{FromParticipant, InteractionMessage, ToParticipant};
+    use crate::parsing::participant::ParticipantParser;
     let document = vec![Line {
         line_contents: LineContents::InteractionWithMessage(
             FromParticipant("Client".to_owned()),

@@ -3,12 +3,9 @@ use std::{
     sync::atomic::{AtomicU32, Ordering},
 };
 
+use crate::model::{Line, LineContents, Participant};
+use crate::ParticipantSet;
 use Ordering::Relaxed;
-
-use crate::v3::{
-    model::{Line, LineContents, Participant},
-    ParticipantSet,
-};
 
 // == Participant Parser ==================================
 #[derive(Debug)]
@@ -110,7 +107,7 @@ impl ParticipantParser {
 
 #[test]
 fn test_parse_participant_names() {
-    use crate::v3::model::{FromParticipant, InteractionMessage, ToParticipant};
+    use crate::model::{FromParticipant, InteractionMessage, ToParticipant};
     let document = vec![Line {
         line_contents: LineContents::InteractionWithMessage(
             FromParticipant("Client".to_string()),
@@ -128,7 +125,7 @@ fn test_parse_participant_names() {
 
 #[test]
 fn test_parse_participants() {
-    use crate::v3::model::{FromParticipant, InteractionMessage, ToParticipant};
+    use crate::model::{FromParticipant, InteractionMessage, ToParticipant};
     let document = vec![
         Line {
             line_contents: LineContents::Empty,
@@ -183,7 +180,7 @@ fn test_parse_participants() {
 
 #[test]
 fn test_participant_parser() {
-    use crate::v3::model::{FromParticipant, InteractionMessage, ToParticipant};
+    use crate::model::{FromParticipant, InteractionMessage, ToParticipant};
     let document = vec![
         Line {
             line_contents: LineContents::Empty,

@@ -3,12 +3,11 @@ use std::{
     sync::atomic::{AtomicU32, Ordering},
 };
 
+use crate::model::{FromParticipant, InteractionMessage, Line, LineContents, ToParticipant};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use regex::Regex;
 use Ordering::Relaxed;
-
-use crate::v3::model::{FromParticipant, InteractionMessage, Line, LineContents, ToParticipant};
 
 lazy_static! {
     static ref INTERACTION_REGEX: Regex = Regex::new("^(.+)\\s+-+>+\\s+([^:]+):?(.*)$").unwrap();

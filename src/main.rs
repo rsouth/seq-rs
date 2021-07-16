@@ -2,9 +2,10 @@
 extern crate log;
 extern crate pretty_env_logger;
 
+use sequencer::diagram::Diagram;
+use sequencer::parsing::document::DocumentParser;
+use sequencer::theme::Theme;
 use std::time::Instant;
-
-use sequencer::v3::{self, parsing::document::DocumentParser, theme::Theme};
 
 fn main() {
     pretty_env_logger::init();
@@ -26,7 +27,7 @@ fn main() {
     let document = DocumentParser::parse(get_text());
     info!("Document: {:#?}", document);
 
-    let diagram = v3::diagram::Diagram::parse(&document);
+    let diagram = Diagram::parse(&document);
     info!("Diagram: {:#?}", diagram);
 
     let theme = Theme::default();
@@ -52,5 +53,5 @@ pub fn get_text() -> &'static str {
      Service -->> Server: Data
      Server --> Client: Response
      Left -> Right
-     {AMPS} -> Client: "
+     # {AMPS} -> Client: "
 }

@@ -1,9 +1,10 @@
-use crate::v3::{
+use crate::parsing::interaction::InteractionParser;
+use crate::theme::Theme;
+use crate::{
     model::{Header, Line},
     parsing::participant::ParticipantParser,
+    InteractionSet, ParticipantSet,
 };
-use crate::v3::{parsing::interaction::InteractionParser, theme::Theme};
-use crate::v3::{InteractionSet, ParticipantSet};
 
 // == Diagram =============================================
 #[derive(Debug)]
@@ -33,7 +34,7 @@ impl Diagram {
 
 #[test]
 fn test_parse_diagram() {
-    use crate::v3::model::LineContents;
+    use crate::model::LineContents;
     let diagram: Vec<Line> = vec![Line {
         line_number: 0,
         line_contents: LineContents::Invalid,
