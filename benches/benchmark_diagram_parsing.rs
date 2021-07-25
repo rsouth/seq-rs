@@ -4,10 +4,6 @@ use sequencer::parsing::document::DocumentParser;
 use sequencer::parsing::interaction::InteractionParser;
 use sequencer::parsing::participant::ParticipantParser;
 
-pub fn get_text_vec() -> Vec<&'static str> {
-    get_text().lines().collect_vec()
-}
-
 pub fn get_text() -> &'static str {
     ":theme Default
      :title Example Sequence Diagram
@@ -41,17 +37,9 @@ fn measure_parse_interactions(c: &mut Criterion) {
     });
 }
 
-fn measure_parse_document(c: &mut Criterion) {
-    let input = get_text();
-    c.bench_function("parsing document", |b| {
-        b.iter(|| DocumentParser::parse(black_box(input)))
-    });
-}
-
 criterion_group!(
     benches,
     measure_parse_participants,
     measure_parse_interactions,
-    measure_parse_document
 );
 criterion_main!(benches);

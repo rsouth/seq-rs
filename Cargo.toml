@@ -17,12 +17,17 @@ euclid = "0.22.6"
 smallvec = "1.6.1"
 lazy_static = "1.4.0"
 fontdue = "0.5.2"
+rayon = "1.5.1"
 
 [dev-dependencies]
 criterion = { version = "0.3", features = ["html_reports"] }
 
 [[bench]]
-name = "benchmark_parsing"
+name = "benchmark_diagram_parsing"
+harness = false
+
+[[bench]]
+name = "benchmark_document_parsing"
 harness = false
 
 #[[bench]]

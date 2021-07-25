@@ -3,7 +3,9 @@ use std::{
     sync::atomic::{AtomicU32, Ordering},
 };
 
-use crate::model::{FromParticipant, InteractionMessage, Line, LineContents, ToParticipant};
+use crate::model::{
+    FromParticipant, InteractionMessage, Line, LineContents, MetaDataType, ToParticipant,
+};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -24,56 +26,57 @@ impl DocumentParser {
             .map(|line| {
                 let line_number = atomic_line_number.fetch_add(1, Relaxed);
                 let line_data = line.to_owned();
-                if line.is_empty() {
-                    Line {
-                        line_number,
-                        line_data,
-                        line_contents: LineContents::Empty,
-                    }
+                let line_contents = if line.is_empty() {
+                    LineContents::Empty
                 } else if line.starts_with('#') {
-                    Line {
-                        line_number,
-                        line_data,
-                        line_contents: LineContents::Comment,
-                    }
+                    LineContents::Comment
                 } else if line.starts_with(':') {
-                    Line {
-                        line_number,
-                        line_data,
-                        line_contents: LineContents::MetaData,
-                    }
+                    DocumentParser::parse_metadata(&line)
+                } else if line.contains("->") {
+                    DocumentParser::parse_interaction(&line)
                 } else {
-                    match INTERACTION_REGEX.captures(line) {
-                        None => Line {
-                            line_number,
-                            line_data,
-                            line_contents: LineContents::Invalid,
-                        },
-                        Some(captures) => {
-                            let from_name = FromParticipant(captures.index(1).trim().to_owned());
-                            let to_name = ToParticipant(captures.index(2).trim().to_owned());
-
-                            if captures.len() >= 3 && !captures.index(3).is_empty() {
-                                let msg = InteractionMessage(captures.index(3).trim().to_owned());
-                                Line {
-                                    line_number,
-                                    line_data,
-                                    line_contents: LineContents::InteractionWithMessage(
-                                        from_name, to_name, msg,
-                                    ),
-                                }
-                            } else {
-                                Line {
-                                    line_number,
-                                    line_data,
-                                    line_contents: LineContents::Interaction(from_name, to_name),
-                                }
-                            }
-                        }
-                    }
+                    LineContents::Invalid
+                };
+                Line {
+                    line_number,
+                    line_data,
+                    line_contents,
                 }
             })
             .collect_vec()
+    }
+
+    #[inline(always)]
+    fn parse_interaction(line: &str) -> LineContents {
+        match INTERACTION_REGEX.captures(line) {
+            None => LineContents::Invalid,
+            Some(captures) => {
+                let from_name = FromParticipant(captures.index(1).trim().to_owned());
+                let to_name = ToParticipant(captures.index(2).trim().to_owned());
+                if captures.len() >= 3 && !captures.index(3).is_empty() {
+                    let msg = InteractionMessage(captures.index(3).trim().to_owned());
+                    LineContents::InteractionWithMessage(from_name, to_name, msg)
+                } else {
+                    LineContents::Interaction(from_name, to_name)
+                }
+            }
+        }
+    }
+
+    #[inline(always)]
+    fn parse_metadata(line: &str) -> LineContents {
+        if let Some(o) = line.trim().split_once(|c: char| c.is_whitespace()) {
+            let x = match o.0 {
+                ":theme" => MetaDataType::Style(o.1.to_owned()),
+                ":title" => MetaDataType::Title(o.1.to_owned()),
+                ":author" => MetaDataType::Author(o.1.to_owned()),
+                ":date" => MetaDataType::Date,
+                &_ => MetaDataType::Invalid,
+            };
+            LineContents::MetaData(x)
+        } else {
+            LineContents::Invalid
+        }
     }
 }
 
@@ -121,7 +124,10 @@ fn test_document_parser() {
 
     // line 1
     assert_eq!(1, vec[1].line_number);
-    assert_eq!(LineContents::MetaData, vec[1].line_contents);
+    assert_eq!(
+        LineContents::MetaData(MetaDataType::Title("Test".to_string())),
+        vec[1].line_contents
+    );
     assert_eq!(":title Test", vec[1].line_data);
 
     // line 2

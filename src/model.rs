@@ -11,20 +11,32 @@ pub struct Line {
 }
 
 // == Line Contents =======================================
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Debug, PartialOrd, PartialEq)]
 pub enum LineContents {
     Invalid,
     Empty,
     Comment,
-    MetaData,
+    MetaData(MetaDataType),
     Interaction(FromParticipant, ToParticipant),
     InteractionWithMessage(FromParticipant, ToParticipant, InteractionMessage),
 }
 
+#[derive(Debug, PartialOrd, PartialEq)]
+pub enum MetaDataType {
+    Style(String), // enum for styles ??
+    FontSize(f32),
+    Title(String),
+    Author(String),
+    Date,
+    Invalid,
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FromParticipant(pub String);
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ToParticipant(pub String);
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct InteractionMessage(pub String);
 
