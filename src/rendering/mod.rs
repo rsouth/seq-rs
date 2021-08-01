@@ -5,90 +5,95 @@ use raqote::{
 
 use super::{diagram::Diagram, model::Participant, theme::Theme, ParticipantSet};
 use crate::rendering::text::{draw_text, measure_string};
+use ordered_float::OrderedFloat;
 
-mod text;
+pub mod text;
 
 pub trait RenderSet {
     fn render(&self, context: &mut RenderContext);
 }
 
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Rect {
-    x: f32,
-    _y: f32,
-    w: f32,
-    h: f32,
+    pub x: OrderedFloat<f32>,
+    pub _y: OrderedFloat<f32>,
+    pub w: OrderedFloat<f32>,
+    pub h: OrderedFloat<f32>,
 }
 
 impl Rect {
     fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
-        Rect { x, _y: y, w, h }
+        Rect {
+            x: x.into(),
+            _y: y.into(),
+            w: w.into(),
+            h: h.into(),
+        }
     }
 }
 
 pub trait Render {
-    fn render(&self, context: &mut RenderContext, x: f32, y: f32) -> Rect;
+    fn render(&self, context: &mut RenderContext) -> Rect;
 }
 
 impl Diagram {
-    pub fn render(&self, theme: Theme) {
-        let size = self.size(&theme);
-        let mut rendering_context = RenderContext::new(size, theme);
+    pub fn render(&self) {
+        let size = self.size(&self.theme);
+        let mut rendering_context = RenderContext::new(size, self.theme.clone());
 
         self.participants.render(&mut rendering_context);
 
-        rendering_context
-            .draw_target
-            .write_png("../../v3.png")
-            .unwrap();
+        rendering_context.draw_target.write_png("v3.png").unwrap();
+        info!("Wrote file...");
     }
 }
 
 impl RenderSet for ParticipantSet {
     fn render(&self, context: &mut RenderContext) {
-        let mut current_x: f32 = 10.0;
-
         self.iter().sorted_by_key(|k| k.index).for_each(|p| {
-            let pos = p.render(context, current_x, 10.0);
-
-            current_x = pos.x + pos.w + 15.0;
+            p.render(context);
         })
     }
 }
 
 impl Render for Participant {
-    fn render(&self, context: &mut RenderContext, x: f32, y: f32) -> Rect {
+    fn render(&self, context: &mut RenderContext) -> Rect {
+        let participant_padding = 5f32; // todo get from theme.
+
         let mut path = PathBuilder::new();
-        let boundary = measure_string(&context.theme, &self.name, context.theme.partic_font_px);
         path.rect(
-            x + boundary.x - 5.0,
-            y,
-            boundary.w as f32 + (5.0 * 2.0),
-            // boundary.h as f32 + (5.0 * 2.0),
-            context.theme.partic_font_px + 5f32,
+            self.x.0 + participant_padding,
+            self.y.0 + participant_padding,
+            self.w.0 + (participant_padding * 2.0),
+            self.h.0 + (participant_padding * 2.0),
         );
 
         let ss = StrokeStyle {
             width: 0.5,
-            join: LineJoin::Bevel,
-            cap: LineCap::Round,
             ..StrokeStyle::default()
         };
 
         context.draw_target.stroke(
             &path.finish(),
             &Source::Solid(SolidSource::from_unpremultiplied_argb(225, 255, 20, 20)),
-            &ss, //&StrokeStyle::default(),
+            &ss,
             &DrawOptions::default(),
         );
 
-        draw_text(context, &self.name, x, y, context.theme.partic_font_px);
+        draw_text(
+            context,
+            &self.name,
+            self.x.0 + (2.0 * participant_padding),
+            self.y.0 + participant_padding,
+            context.theme.partic_font_px,
+        );
 
         info!(
             "Drawing box for {} x: {}, y: {}, w: {}, h: {}",
-            self.name, x, y, boundary.w, boundary.h
+            self.name, self.x.0, self.y.0, self.w.0, self.h.0
         );
 
-        Rect::new(x, y, boundary.w as f32, boundary.h as f32)
+        Rect::new(self.x.0, self.y.0, self.w.0, self.h.0)
     }
 }
 
@@ -97,21 +102,9 @@ impl Sizable for Diagram {
         let interaction_height = self.interactions.iter().map(|p| p.index).max();
         let height: i32 = 10 + (interaction_height.unwrap() as i32 * 20) + 10;
 
-        let w: Size = self
-            .participants
-            .iter()
-            .map(|p| measure_string(_theme, &p.name, _theme.partic_font_px))
-            .fold(
-                Size {
-                    height: 0,
-                    width: 0,
-                },
-                |a, x| Size {
-                    width: a.width + x.w as i32,
-                    height: a.height + x.h as i32,
-                },
-            );
-        let width = 10 + w.width + ((self.participants.len() as i32 - 1) * 15) + 10;
+        let w = self.participants.iter().max_by_key(|p| p.x).unwrap();
+        let xxx = w.x.0 + w.w.0;
+        let width = (xxx + 5f32 + (2.0 * _theme.document_border_width)) as i32;
 
         Size { height, width }
     }

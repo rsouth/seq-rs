@@ -1,3 +1,5 @@
+use ordered_float::OrderedFloat;
+
 // == Message =============================================
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Clone)]
 pub struct Message(pub String);
@@ -51,6 +53,10 @@ pub struct Participant {
     pub index: u32,
     pub active_from: u32,
     pub active_to: u32,
+    pub x: OrderedFloat<f32>,
+    pub y: OrderedFloat<f32>,
+    pub w: OrderedFloat<f32>,
+    pub h: OrderedFloat<f32>,
 }
 
 // == Interaction Type ====================================

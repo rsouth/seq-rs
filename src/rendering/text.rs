@@ -23,11 +23,13 @@ pub fn measure_string(theme: &Theme, content: &str, px: f32) -> Rect {
     let layout = layout.glyphs();
     let first_glyph = layout.first().unwrap();
     let last_glyph = layout.last().unwrap();
+    let yy = layout.iter().map(|glyph| glyph.y as i32).min().unwrap() as f32;
+    let hh = layout.iter().map(|glyph| glyph.height).max().unwrap() as f32;
     Rect {
-        x: first_glyph.x,
-        _y: layout.iter().map(|glyph| glyph.y as i32).min().unwrap() as f32,
-        w: (first_glyph.x + last_glyph.x + last_glyph.width as f32),
-        h: layout.iter().map(|glyph| glyph.height).max().unwrap() as f32,
+        x: first_glyph.x.into(),
+        _y: yy.into(),
+        w: (first_glyph.x + last_glyph.x + last_glyph.width as f32).into(),
+        h: hh.into(),
     }
 }
 
@@ -36,17 +38,12 @@ pub fn draw_text(rc: &mut RenderContext, content: &str, x: f32, y: f32, px: f32)
     layout.reset(&LayoutSettings {
         x,
         y,
-        // horizontal_align: HorizontalAlign::Center,
         ..LayoutSettings::default()
     });
     let font = &rc.theme.body_font;
     layout.append(&[font], &TextStyle::new(content, px, 0));
-    // println!("{:?}", layout.glyphs());
     for glyph in layout.glyphs() {
-        // let (metrics, coverage) =
-        //     font.rasterize_indexed_subpixel(glyph.key.glyph_index as usize, px);
         let (metrics, coverage) = font.rasterize_indexed(glyph.key.glyph_index as usize, px);
-        // let (metrics, coverage) = font.rasterize('a', px);
         info!("Metrics: {:?}", glyph);
 
         //

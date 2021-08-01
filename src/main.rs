@@ -27,11 +27,12 @@ fn main() {
     let document = DocumentParser::parse(get_text());
     info!("Document: {:#?}", document);
 
-    let diagram = Diagram::parse(&document);
+    let theme = Theme::default();
+
+    let diagram = Diagram::parse(document, theme);
     info!("Diagram: {:#?}", diagram);
 
-    let theme = Theme::default();
-    diagram.render(theme);
+    diagram.render();
 
     info!(
         "Finished in {} micros ({}ms)",
