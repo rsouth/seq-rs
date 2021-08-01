@@ -50,13 +50,13 @@ pub struct Header {}
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Participant {
     pub name: String,
-    pub index: u32,
-    pub active_from: u32,
-    pub active_to: u32,
-    pub x: OrderedFloat<f32>,
-    pub y: OrderedFloat<f32>,
-    pub w: OrderedFloat<f32>,
-    pub h: OrderedFloat<f32>,
+    pub index: usize,
+    pub active_from: usize,
+    pub active_to: usize,
+    pub x: usize,
+    pub y: usize,
+    pub w: usize,
+    pub h: usize,
 }
 
 // == Interaction Type ====================================

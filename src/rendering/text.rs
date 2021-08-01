@@ -6,11 +6,9 @@ use fontdue::layout::{CoordinateSystem, Layout, LayoutSettings, TextStyle};
 #[cfg(debug_assertions)]
 use raqote::{DrawOptions, PathBuilder, SolidSource, Source, StrokeStyle};
 
-// #[cfg(debug_assertions)]
-
-pub fn measure_string(theme: &Theme, content: &str, px: f32) -> Rect {
+pub fn measure_string(theme: &Theme, content: &str, px: usize) -> Rect {
     debug_assert!(!content.is_empty());
-    debug_assert!(px > 0_f32);
+    debug_assert!(px > 0);
     let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
     layout.reset(&LayoutSettings {
         x: 0.0,
@@ -18,32 +16,32 @@ pub fn measure_string(theme: &Theme, content: &str, px: f32) -> Rect {
         ..LayoutSettings::default()
     });
     let font = &theme.body_font;
-    layout.append(&[font], &TextStyle::new(content, px, 0));
+    layout.append(&[font], &TextStyle::new(content, px as f32, 0));
 
     let layout = layout.glyphs();
     let first_glyph = layout.first().unwrap();
     let last_glyph = layout.last().unwrap();
-    let yy = layout.iter().map(|glyph| glyph.y as i32).min().unwrap() as f32;
-    let hh = layout.iter().map(|glyph| glyph.height).max().unwrap() as f32;
+    let y = layout.iter().map(|glyph| glyph.y as usize).min().unwrap();
+    let h = layout.iter().map(|glyph| glyph.height).max().unwrap() as usize;
     Rect {
-        x: first_glyph.x.into(),
-        _y: yy.into(),
-        w: (first_glyph.x + last_glyph.x + last_glyph.width as f32).into(),
-        h: hh.into(),
+        x: first_glyph.x as usize,
+        y,
+        w: ((first_glyph.x + last_glyph.x) as usize + last_glyph.width),
+        h,
     }
 }
 
-pub fn draw_text(rc: &mut RenderContext, content: &str, x: f32, y: f32, px: f32) {
+pub fn draw_text(rc: &mut RenderContext, content: &str, x: usize, y: usize, px: usize) {
     let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
     layout.reset(&LayoutSettings {
-        x,
-        y,
+        x: x as f32,
+        y: y as f32,
         ..LayoutSettings::default()
     });
     let font = &rc.theme.body_font;
-    layout.append(&[font], &TextStyle::new(content, px, 0));
+    layout.append(&[font], &TextStyle::new(content, px as f32, 0));
     for glyph in layout.glyphs() {
-        let (metrics, coverage) = font.rasterize_indexed(glyph.key.glyph_index as usize, px);
+        let (metrics, coverage) = font.rasterize_indexed(glyph.key.glyph_index as usize, px as f32);
         info!("Metrics: {:?}", glyph);
 
         //
@@ -114,13 +112,13 @@ pub fn rgb_to_u32(red: usize, green: usize, blue: usize, alpha: usize) -> u32 {
 #[test]
 fn test_measure_text() {
     let theme = Theme::default();
-    let size = measure_string(&theme, "A", 20_f32);
+    let size = measure_string(&theme, "A", 20);
     assert_eq!(0.0, size.x.0);
     assert_eq!(5.0, size._y.0);
     assert_eq!(12.0, size.w.0);
     assert_eq!(15.0, size.h.0);
 
-    let size = measure_string(&theme, "AA", 20_f32);
+    let size = measure_string(&theme, "AA", 20);
     assert_eq!(0.0, size.x.0);
     assert_eq!(5.0, size._y.0);
     assert_eq!(24.0, size.w.0);

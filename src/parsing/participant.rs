@@ -9,6 +9,7 @@ use crate::rendering::Rect;
 use crate::theme::Theme;
 use crate::ParticipantSet;
 use ordered_float::OrderedFloat;
+use std::sync::atomic::AtomicUsize;
 use Ordering::Relaxed;
 
 // == Participant Parser ==================================
@@ -29,16 +30,16 @@ impl ParticipantParser {
     /// note down the last appearange of a Participant
     ///  -> this is it's activation_end
     pub fn parse(document: &[Line], theme: &Theme) -> ParticipantSet {
-        let current_participant_index = AtomicU32::new(0);
-        let current_interaction_index = AtomicU32::new(0);
-        let mut participant_indices: HashMap<String, u32> = HashMap::new();
-        let mut first_index_for_participant: HashMap<String, u32> = HashMap::new();
-        let mut last_index_for_participant: HashMap<String, u32> = HashMap::new();
-        let mut x_position_for_participant: HashMap<String, OrderedFloat<f32>> = HashMap::new();
+        let current_participant_index = AtomicUsize::new(0);
+        let current_interaction_index = AtomicUsize::new(0);
+        let mut participant_indices: HashMap<String, usize> = HashMap::new();
+        let mut first_index_for_participant: HashMap<String, usize> = HashMap::new();
+        let mut last_index_for_participant: HashMap<String, usize> = HashMap::new();
+        let mut x_position_for_participant: HashMap<String, usize> = HashMap::new();
         let mut rect_for_participant: HashMap<String, Rect> = HashMap::new();
 
         let mut current_x = theme.document_border_width;
-        let partic_h_gap = 20.0; // todo get from theme...
+        let partic_h_gap = theme.partic_h_gap;
 
         document
             .iter()
@@ -61,52 +62,40 @@ impl ParticipantParser {
                     }
                 };
 
-                // participant index - from participant
-                if !participant_indices.contains_key(&f.0) {
-                    participant_indices.insert(
-                        f.0.to_string(),
-                        current_participant_index.fetch_add(1, Relaxed),
-                    );
+                for pppp in [&f.0, &t.0] {
+                    if !participant_indices.contains_key(pppp) {
+                        participant_indices.insert(
+                            pppp.to_string(),
+                            current_participant_index.fetch_add(1, Relaxed),
+                        );
 
-                    // by virtue of not being in participant_indices, it can't have an x_pos or width either...
-                    x_position_for_participant.insert(f.0.to_string(), current_x.into());
-                    let w = measure_string(theme, f.0.to_string().as_str(), theme.partic_font_px);
-                    current_x = current_x + partic_h_gap + w.w.into_inner();
-                    rect_for_participant.insert(f.0.to_string(), w);
+                        // by virtue of not being in participant_indices, it can't have an x_pos or width either...
+                        x_position_for_participant.insert(pppp.to_string(), current_x);
+                        let w =
+                            measure_string(theme, pppp.to_string().as_str(), theme.partic_font_px);
+                        current_x = current_x + partic_h_gap + w.w;
+                        rect_for_participant.insert(pppp.to_string(), w);
+                    }
+
+                    // active start index for this interaction on the 'from' participant
+                    if !first_index_for_participant.contains_key(pppp) {
+                        first_index_for_participant
+                            .insert(pppp.to_string(), current_interaction_index.load(Relaxed));
+                    }
+
+                    // active start index for this interaction on the 'to' participant
+                    if !first_index_for_participant.contains_key(&t.0) {
+                        first_index_for_participant
+                            .insert(pppp.to_string(), current_interaction_index.load(Relaxed));
+                    }
+
+                    // active end index for this interaction on the 'from' participant
+                    last_index_for_participant
+                        .insert(pppp.to_string(), current_interaction_index.load(Relaxed));
+                    // active end index for this interaction on the 'to' participant
+                    last_index_for_participant
+                        .insert(pppp.to_string(), current_interaction_index.load(Relaxed));
                 }
-
-                // participant index - to participant
-                if !participant_indices.contains_key(&t.0) {
-                    participant_indices.insert(
-                        t.0.to_string(),
-                        current_participant_index.fetch_add(1, Relaxed),
-                    );
-
-                    // by virtue of not being in participant_indices, it can't have an x_pos or width either...
-                    x_position_for_participant.insert(t.0.to_string(), current_x.into());
-                    let w = measure_string(theme, t.0.to_string().as_str(), theme.partic_font_px);
-                    current_x = current_x + partic_h_gap + w.w.into_inner();
-                    rect_for_participant.insert(t.0.to_string(), w);
-                }
-
-                // active start index for this interaction on the 'from' participant
-                if !first_index_for_participant.contains_key(&f.0) {
-                    first_index_for_participant
-                        .insert(f.0.to_string(), current_interaction_index.load(Relaxed));
-                }
-
-                // active start index for this interaction on the 'to' participant
-                if !first_index_for_participant.contains_key(&t.0) {
-                    first_index_for_participant
-                        .insert(t.0.to_string(), current_interaction_index.load(Relaxed));
-                }
-
-                // active end index for this interaction on the 'from' participant
-                last_index_for_participant
-                    .insert(f.0.to_string(), current_interaction_index.load(Relaxed));
-                // active end index for this interaction on the 'to' participant
-                last_index_for_participant
-                    .insert(t.0.to_string(), current_interaction_index.load(Relaxed));
 
                 current_interaction_index.fetch_add(1, Relaxed);
             });

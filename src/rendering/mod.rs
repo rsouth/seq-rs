@@ -13,20 +13,15 @@ pub trait RenderSet {
 
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Rect {
-    pub x: OrderedFloat<f32>,
-    pub _y: OrderedFloat<f32>,
-    pub w: OrderedFloat<f32>,
-    pub h: OrderedFloat<f32>,
+    pub x: usize,
+    pub y: usize,
+    pub w: usize,
+    pub h: usize,
 }
 
 impl Rect {
-    fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
-        Rect {
-            x: x.into(),
-            _y: y.into(),
-            w: w.into(),
-            h: h.into(),
-        }
+    fn new(x: usize, y: usize, w: usize, h: usize) -> Self {
+        Rect { x, y, w, h }
     }
 }
 
@@ -56,14 +51,14 @@ impl RenderSet for ParticipantSet {
 
 impl Render for Participant {
     fn render(&self, context: &mut RenderContext) -> Rect {
-        let participant_padding = 5f32; // todo get from theme.
+        let participant_padding = context.theme.partic_padding; // todo get from theme.
 
         let mut path = PathBuilder::new();
         path.rect(
-            self.x.0 + participant_padding,
-            self.y.0 + participant_padding,
-            self.w.0 + (participant_padding * 2.0),
-            self.h.0 + (participant_padding * 2.0),
+            (self.x + participant_padding) as f32,
+            (self.y + participant_padding) as f32,
+            (self.w + (participant_padding * 2)) as f32,
+            (self.h + (participant_padding * 2)) as f32,
         );
 
         let ss = StrokeStyle {
@@ -81,29 +76,30 @@ impl Render for Participant {
         draw_text(
             context,
             &self.name,
-            self.x.0 + (2.0 * participant_padding),
-            self.y.0 + participant_padding,
+            self.x + (2 * participant_padding),
+            self.y + participant_padding,
             context.theme.partic_font_px,
         );
 
         info!(
             "Drawing box for {} x: {}, y: {}, w: {}, h: {}",
-            self.name, self.x.0, self.y.0, self.w.0, self.h.0
+            self.name, self.x, self.y, self.w, self.h
         );
 
-        Rect::new(self.x.0, self.y.0, self.w.0, self.h.0)
+        Rect::new(self.x, self.y, self.w, self.h)
     }
 }
 
 impl Sizable for Diagram {
     fn size(&self, _theme: &Theme) -> Size {
-        let interaction_height = self.interactions.iter().map(|p| p.index).max();
+        let interaction_height = self.interactions.iter().map(|p| p.index).max().unwrap() as u32;
         let height: i32 =
-            (2 * _theme.document_border_width as i32) + (interaction_height.unwrap() as i32 * 20);
+            ((2 * _theme.document_border_width) + (interaction_height * 20) as usize) as i32;
 
         let w = self.participants.iter().max_by_key(|p| p.x).unwrap();
         let width: i32 =
-            (w.x.0 + w.w.0 + (2.0 * 5f32) + (2.0 * _theme.document_border_width)) as i32;
+            (w.x + w.w + (2 * self.theme.partic_padding) + (2 * _theme.document_border_width))
+                as i32;
 
         Size { height, width }
     }
