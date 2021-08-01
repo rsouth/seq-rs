@@ -115,14 +115,14 @@ pub fn rgb_to_u32(red: usize, green: usize, blue: usize, alpha: usize) -> u32 {
 fn test_measure_text() {
     let theme = Theme::default();
     let size = measure_string(&theme, "A", 20_f32);
-    assert_eq!(0.0, size.x);
-    assert_eq!(5.0, size._y);
-    assert_eq!(12.0, size.w);
-    assert_eq!(15.0, size.h);
+    assert_eq!(0.0, size.x.0);
+    assert_eq!(5.0, size._y.0);
+    assert_eq!(12.0, size.w.0);
+    assert_eq!(15.0, size.h.0);
 
     let size = measure_string(&theme, "AA", 20_f32);
-    assert_eq!(0.0, size.x);
-    assert_eq!(5.0, size._y);
-    assert_eq!(24.0, size.w);
-    assert_eq!(15.0, size.h);
+    assert_eq!(0.0, size.x.0);
+    assert_eq!(5.0, size._y.0);
+    assert_eq!(24.0, size.w.0);
+    assert_eq!(15.0, size.h.0);
 }

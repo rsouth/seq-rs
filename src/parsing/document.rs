@@ -31,9 +31,9 @@ impl DocumentParser {
                 } else if line.starts_with('#') {
                     LineContents::Comment
                 } else if line.starts_with(':') {
-                    DocumentParser::parse_metadata(&line)
+                    DocumentParser::parse_metadata(line)
                 } else if line.contains("->") {
-                    DocumentParser::parse_interaction(&line)
+                    DocumentParser::parse_interaction(line)
                 } else {
                     LineContents::Invalid
                 };

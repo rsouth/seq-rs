@@ -1,10 +1,8 @@
 use itertools::Itertools;
-use raqote::{
-    DrawOptions, DrawTarget, LineCap, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle,
-};
+use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source, StrokeStyle};
 
 use super::{diagram::Diagram, model::Participant, theme::Theme, ParticipantSet};
-use crate::rendering::text::{draw_text, measure_string};
+use crate::rendering::text::draw_text;
 use ordered_float::OrderedFloat;
 
 pub mod text;
@@ -100,11 +98,12 @@ impl Render for Participant {
 impl Sizable for Diagram {
     fn size(&self, _theme: &Theme) -> Size {
         let interaction_height = self.interactions.iter().map(|p| p.index).max();
-        let height: i32 = 10 + (interaction_height.unwrap() as i32 * 20) + 10;
+        let height: i32 =
+            (2 * _theme.document_border_width as i32) + (interaction_height.unwrap() as i32 * 20);
 
         let w = self.participants.iter().max_by_key(|p| p.x).unwrap();
-        let xxx = w.x.0 + w.w.0;
-        let width = (xxx + 5f32 + (2.0 * _theme.document_border_width)) as i32;
+        let width: i32 =
+            (w.x.0 + w.w.0 + (2.0 * 5f32) + (2.0 * _theme.document_border_width)) as i32;
 
         Size { height, width }
     }

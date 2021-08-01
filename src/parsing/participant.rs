@@ -71,7 +71,7 @@ impl ParticipantParser {
                     // by virtue of not being in participant_indices, it can't have an x_pos or width either...
                     x_position_for_participant.insert(f.0.to_string(), current_x.into());
                     let w = measure_string(theme, f.0.to_string().as_str(), theme.partic_font_px);
-                    current_x = current_x + partic_h_gap + *&w.w.into_inner();
+                    current_x = current_x + partic_h_gap + w.w.into_inner();
                     rect_for_participant.insert(f.0.to_string(), w);
                 }
 
@@ -85,7 +85,7 @@ impl ParticipantParser {
                     // by virtue of not being in participant_indices, it can't have an x_pos or width either...
                     x_position_for_participant.insert(t.0.to_string(), current_x.into());
                     let w = measure_string(theme, t.0.to_string().as_str(), theme.partic_font_px);
-                    current_x = current_x + partic_h_gap + *&w.w.into_inner();
+                    current_x = current_x + partic_h_gap + w.w.into_inner();
                     rect_for_participant.insert(t.0.to_string(), w);
                 }
 
@@ -127,7 +127,7 @@ impl ParticipantParser {
                 active_from: *first_index_for_participant.get(p_name.0).unwrap(),
                 active_to: *last_index_for_participant.get(p_name.0).unwrap(),
                 x: *x_position_for_participant.get(p_name.0).unwrap(),
-                y: theme.document_border_width.into(), //(*rect_for_participant.get(p_name.0).unwrap()).clone(),
+                y: theme.document_border_width.into(),
                 w: rect_for_participant.get(p_name.0).unwrap().w,
                 h: max_height,
                 name: p_name.0.to_owned(),
