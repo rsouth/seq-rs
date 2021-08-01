@@ -1,14 +1,10 @@
-use std::{
-    collections::HashMap,
-    sync::atomic::{AtomicU32, Ordering},
-};
+use std::{collections::HashMap, sync::atomic::Ordering};
 
 use crate::model::{Line, LineContents, Participant};
 use crate::rendering::text::measure_string;
 use crate::rendering::Rect;
 use crate::theme::Theme;
 use crate::ParticipantSet;
-use ordered_float::OrderedFloat;
 use std::sync::atomic::AtomicUsize;
 use Ordering::Relaxed;
 
@@ -116,7 +112,7 @@ impl ParticipantParser {
                 active_from: *first_index_for_participant.get(p_name.0).unwrap(),
                 active_to: *last_index_for_participant.get(p_name.0).unwrap(),
                 x: *x_position_for_participant.get(p_name.0).unwrap(),
-                y: theme.document_border_width.into(),
+                y: theme.document_border_width,
                 w: rect_for_participant.get(p_name.0).unwrap().w,
                 h: max_height,
                 name: p_name.0.to_owned(),

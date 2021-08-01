@@ -3,7 +3,6 @@ use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source, StrokeSt
 
 use super::{diagram::Diagram, model::Participant, theme::Theme, ParticipantSet};
 use crate::rendering::text::draw_text;
-use ordered_float::OrderedFloat;
 
 pub mod text;
 

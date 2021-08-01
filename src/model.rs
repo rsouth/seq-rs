@@ -1,5 +1,3 @@
-use ordered_float::OrderedFloat;
-
 // == Message =============================================
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Clone)]
 pub struct Message(pub String);
