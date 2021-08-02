@@ -4,8 +4,8 @@ pub const INPUT_FILE: &str = "input";
 pub const EXAMPLE: &str = "example";
 pub const OUTPUT_FILE: &str = "output";
 
-pub(crate) fn cli() -> ArgMatches {
-    App::new("MyApp")
+pub(crate) fn parse_args() -> ArgMatches {
+    App::new("Sequencer")
         .setting(AppSettings::ColoredHelp)
         .about("does awesome things")
         .version(crate_version!())
@@ -14,7 +14,8 @@ pub(crate) fn cli() -> ArgMatches {
             Arg::new(INPUT_FILE)
                 .short('f')
                 .long("file")
-                .takes_value(true),
+                .takes_value(true)
+                .required(false),
         )
         .arg(
             Arg::new(EXAMPLE)
@@ -25,7 +26,7 @@ pub(crate) fn cli() -> ArgMatches {
         // .arg("<output> 'sets an output file' 'test'")
         .arg(
             Arg::new(OUTPUT_FILE)
-                .last(true)
+                // .last(true)
                 .about("sets an output file")
                 // .long_about("can be either with or without .png extension")
                 .required(true), // .required_unless_present() // todo when we add 'validate' mode

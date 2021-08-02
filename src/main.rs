@@ -34,6 +34,7 @@ fn read_from_stdin() -> Vec<String> {
     lines
 }
 
+#[derive(Debug)]
 enum Source {
     StdIn,
     File(String),
@@ -42,6 +43,7 @@ enum Source {
 
 #[derive(Debug)]
 struct Config {
+    pub input_source: Source,
     pub output_path: String,
 }
 
@@ -49,20 +51,12 @@ fn main() {
     pretty_env_logger::init();
     let instant = Instant::now();
 
-    // parse CLI args
-    let options = cli::cli();
-    let src = determine_doc_source(&options);
+    let config = ppaarrssee_aarrggss();
+    println!("Config: {:?}", config);
 
     // load in data from file/stdin/etc
-    let data = load_data(&src);
-
+    let data = load_data(&config.input_source);
     println!("{:?}", data);
-
-    // todo 'document config' here - can override things like the :theme (from args) etc.
-    let output_path = options.value_of(cli::OUTPUT_FILE).unwrap().to_string();
-    let config = Config { output_path };
-
-    println!("Config: {:?}", config);
 
     let document = DocumentParser::parse(data);
     info!("Document: {:#?}", document);
@@ -78,6 +72,19 @@ fn main() {
         instant.elapsed().as_micros(),
         instant.elapsed().as_millis()
     );
+}
+
+fn ppaarrssee_aarrggss() -> Config {
+    // parse CLI args
+    let cli_options = cli::parse_args();
+    let input_source = resolve_input_source(&cli_options);
+
+    // todo 'document config' here - can override things like the :theme (from args) etc.
+    let output_path = cli_options.value_of(cli::OUTPUT_FILE).unwrap().to_string();
+    Config {
+        input_source,
+        output_path,
+    }
 }
 
 fn load_data(src: &Source) -> Vec<String> {
@@ -102,7 +109,7 @@ fn load_data(src: &Source) -> Vec<String> {
     }
 }
 
-fn determine_doc_source(options: &ArgMatches) -> Source {
+fn resolve_input_source(options: &ArgMatches) -> Source {
     if options.is_present(cli::EXAMPLE) {
         Source::Example
     } else if options.is_present(cli::INPUT_FILE) {
