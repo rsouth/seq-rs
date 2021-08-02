@@ -1,12 +1,11 @@
-use std::{collections::HashMap, sync::atomic::Ordering};
+use std::collections::HashMap;
 
 use crate::model::{Line, LineContents, Participant};
 use crate::rendering::text::measure_string;
 use crate::rendering::Rect;
 use crate::theme::Theme;
 use crate::ParticipantSet;
-use std::sync::atomic::AtomicUsize;
-use Ordering::Relaxed;
+use std::ops::AddAssign;
 
 // == Participant Parser ==================================
 #[derive(Debug)]
@@ -26,8 +25,8 @@ impl ParticipantParser {
     /// note down the last appearange of a Participant
     ///  -> this is it's activation_end
     pub fn parse(document: &[Line], theme: &Theme) -> ParticipantSet {
-        let current_participant_index = AtomicUsize::new(0);
-        let current_interaction_index = AtomicUsize::new(0);
+        let mut current_participant_index: usize = 0;
+        let mut current_interaction_index: usize = 0;
         let mut participant_indices: HashMap<String, usize> = HashMap::new();
         let mut first_index_for_participant: HashMap<String, usize> = HashMap::new();
         let mut last_index_for_participant: HashMap<String, usize> = HashMap::new();
@@ -52,48 +51,44 @@ impl ParticipantParser {
                     LineContents::Interaction(f, t) => (f, t),
                     LineContents::InteractionWithMessage(f, t, _) => (f, t),
                     _ => {
-                        // when we have entry/exit messages this method will need to support only having
-                        // a from or to participant alone.
+                        // todo when we have entry/exit messages this method will need to support only having
+                        //  a from or to participant alone.
                         panic!("...");
                     }
                 };
 
-                for pppp in [&f.0, &t.0] {
-                    if !participant_indices.contains_key(pppp) {
+                IntoIterator::into_iter([&f.0, &t.0]).for_each(|participant_name| {
+                    if !participant_indices.contains_key(participant_name) {
                         participant_indices.insert(
-                            pppp.to_string(),
-                            current_participant_index.fetch_add(1, Relaxed),
+                            participant_name.to_string(),
+                            current_participant_index, // .fetch_add(1, Relaxed),
                         );
+                        current_participant_index.add_assign(1);
 
                         // by virtue of not being in participant_indices, it can't have an x_pos or width either...
-                        x_position_for_participant.insert(pppp.to_string(), current_x);
-                        let w =
-                            measure_string(theme, pppp.to_string().as_str(), theme.partic_font_px);
-                        current_x = current_x + partic_h_gap + w.w;
-                        rect_for_participant.insert(pppp.to_string(), w);
+                        x_position_for_participant.insert(participant_name.to_string(), current_x);
+                        let string_rect =
+                            measure_string(theme, participant_name, theme.partic_font_px);
+                        rect_for_participant.insert(participant_name.to_string(), string_rect);
+                        current_x = current_x + partic_h_gap + string_rect.w;
                     }
 
                     // active start index for this interaction on the 'from' participant
-                    if !first_index_for_participant.contains_key(pppp) {
-                        first_index_for_participant
-                            .insert(pppp.to_string(), current_interaction_index.load(Relaxed));
-                    }
-
-                    // active start index for this interaction on the 'to' participant
-                    if !first_index_for_participant.contains_key(&t.0) {
-                        first_index_for_participant
-                            .insert(pppp.to_string(), current_interaction_index.load(Relaxed));
+                    if !first_index_for_participant.contains_key(participant_name) {
+                        first_index_for_participant.insert(
+                            participant_name.to_string(),
+                            current_interaction_index, //  .load(Relaxed),
+                        );
                     }
 
                     // active end index for this interaction on the 'from' participant
-                    last_index_for_participant
-                        .insert(pppp.to_string(), current_interaction_index.load(Relaxed));
-                    // active end index for this interaction on the 'to' participant
-                    last_index_for_participant
-                        .insert(pppp.to_string(), current_interaction_index.load(Relaxed));
-                }
+                    last_index_for_participant.insert(
+                        participant_name.to_string(),
+                        current_interaction_index, // .load(Relaxed),
+                    );
+                });
 
-                current_interaction_index.fetch_add(1, Relaxed);
+                current_interaction_index.add_assign(1); //.fetch_add(1, Relaxed);
             });
 
         info!("After first pass:");
@@ -105,16 +100,18 @@ impl ParticipantParser {
         info!("Participant active to: {:#?}", last_index_for_participant);
 
         let max_height = rect_for_participant.values().map(|p| p.h).max().unwrap();
-
+        let partic_y = theme.document_border_width; // todo take into account any header etc somehow
         participant_indices
             .iter()
             .map(|p_name| Participant {
                 active_from: *first_index_for_participant.get(p_name.0).unwrap(),
                 active_to: *last_index_for_participant.get(p_name.0).unwrap(),
-                x: *x_position_for_participant.get(p_name.0).unwrap(),
-                y: theme.document_border_width,
-                w: rect_for_participant.get(p_name.0).unwrap().w,
-                h: max_height,
+                rect: Rect {
+                    x: *x_position_for_participant.get(p_name.0).unwrap(),
+                    y: partic_y,
+                    w: rect_for_participant.get(p_name.0).unwrap().w,
+                    h: max_height,
+                },
                 name: p_name.0.to_owned(),
                 index: *p_name.1,
             })

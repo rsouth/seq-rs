@@ -43,8 +43,8 @@ impl InteractionParser {
 
                     Interaction {
                         index: interaction_index.fetch_add(1, Ordering::Relaxed),
-                        from_participant: from_p.clone(),
-                        to_participant: to_p.clone(),
+                        from_participant: from_p.to_owned(),
+                        to_participant: to_p.to_owned(),
                         interaction_type: InteractionParser::interaction_type(from_p, to_p),
                         message: None,
                     }

@@ -19,13 +19,13 @@ pub struct Rect {
 }
 
 impl Rect {
-    fn new(x: usize, y: usize, w: usize, h: usize) -> Self {
+    fn _new(x: usize, y: usize, w: usize, h: usize) -> Self {
         Rect { x, y, w, h }
     }
 }
 
 pub trait Render {
-    fn render(&self, context: &mut RenderContext) -> Rect;
+    fn render(&self, context: &mut RenderContext);
 }
 
 impl Diagram {
@@ -49,15 +49,15 @@ impl RenderSet for ParticipantSet {
 }
 
 impl Render for Participant {
-    fn render(&self, context: &mut RenderContext) -> Rect {
+    fn render(&self, context: &mut RenderContext) {
         let participant_padding = context.theme.partic_padding; // todo get from theme.
 
         let mut path = PathBuilder::new();
         path.rect(
-            (self.x + participant_padding) as f32,
-            (self.y + participant_padding) as f32,
-            (self.w + (participant_padding * 2)) as f32,
-            (self.h + (participant_padding * 2)) as f32,
+            (self.rect.x + participant_padding) as f32,
+            (self.rect.y + participant_padding) as f32,
+            (self.rect.w + (participant_padding * 2)) as f32,
+            (self.rect.h + (participant_padding * 2)) as f32,
         );
 
         let ss = StrokeStyle {
@@ -75,17 +75,15 @@ impl Render for Participant {
         draw_text(
             context,
             &self.name,
-            self.x + (2 * participant_padding),
-            self.y + participant_padding,
+            self.rect.x + (2 * participant_padding),
+            self.rect.y + participant_padding,
             context.theme.partic_font_px,
         );
 
         info!(
             "Drawing box for {} x: {}, y: {}, w: {}, h: {}",
-            self.name, self.x, self.y, self.w, self.h
+            self.name, self.rect.x, self.rect.y, self.rect.w, self.rect.h
         );
-
-        Rect::new(self.x, self.y, self.w, self.h)
     }
 }
 
@@ -95,10 +93,11 @@ impl Sizable for Diagram {
         let height: i32 =
             ((2 * _theme.document_border_width) + (interaction_height * 20) as usize) as i32;
 
-        let w = self.participants.iter().max_by_key(|p| p.x).unwrap();
-        let width: i32 =
-            (w.x + w.w + (2 * self.theme.partic_padding) + (2 * _theme.document_border_width))
-                as i32;
+        let w = self.participants.iter().max_by_key(|p| p.rect.x).unwrap();
+        let width: i32 = (w.rect.x
+            + w.rect.w
+            + (2 * self.theme.partic_padding)
+            + (2 * _theme.document_border_width)) as i32;
 
         Size { height, width }
     }

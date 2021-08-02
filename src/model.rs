@@ -1,3 +1,5 @@
+use crate::rendering::Rect;
+
 // == Message =============================================
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Clone)]
 pub struct Message(pub String);
@@ -5,7 +7,7 @@ pub struct Message(pub String);
 // == Line ================================================
 #[derive(Debug)]
 pub struct Line {
-    pub line_number: u32,
+    pub line_number: usize,
     pub line_contents: LineContents,
     pub line_data: String,
 }
@@ -51,10 +53,11 @@ pub struct Participant {
     pub index: usize,
     pub active_from: usize,
     pub active_to: usize,
-    pub x: usize,
-    pub y: usize,
-    pub w: usize,
-    pub h: usize,
+    // pub x: usize,
+    // pub y: usize,
+    // pub w: usize,
+    // pub h: usize,
+    pub rect: Rect,
 }
 
 // == Interaction Type ====================================

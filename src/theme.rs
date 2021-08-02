@@ -20,7 +20,7 @@ impl Default for Theme {
             title_font: Theme::load_font(include_bytes!("../assets/Roboto-Thin.ttf") as &[u8]),
             body_font: Theme::load_font(include_bytes!("../assets/Roboto-Thin.ttf") as &[u8]),
             title_font_px: 30,
-            partic_font_px: 18,
+            partic_font_px: 30, // 18,
             message_font_px: 16,
             document_border_width: 10,
             partic_padding: 5,

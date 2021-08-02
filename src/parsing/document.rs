@@ -1,7 +1,4 @@
-use std::{
-    ops::Index,
-    sync::atomic::{AtomicU32, Ordering},
-};
+use std::ops::Index;
 
 use crate::model::{
     FromParticipant, InteractionMessage, Line, LineContents, MetaDataType, ToParticipant,
@@ -9,7 +6,7 @@ use crate::model::{
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use regex::Regex;
-use Ordering::Relaxed;
+use std::ops::AddAssign;
 
 lazy_static! {
     static ref INTERACTION_REGEX: Regex = Regex::new("^(.+)\\s+-+>+\\s+([^:]+):?(.*)$").unwrap();
@@ -18,27 +15,26 @@ lazy_static! {
 // == Document Parser =====================================
 pub struct DocumentParser;
 impl DocumentParser {
-    pub fn parse(line: &str) -> Vec<Line> {
-        let atomic_line_number = AtomicU32::new(0);
-        line.lines()
-            .into_iter()
+    pub fn parse(line: Vec<String>) -> Vec<Line> {
+        let mut atomic_line_number: usize = 0;
+        line.iter()
             .map(|line| line.trim())
             .map(|line| {
-                let line_number = atomic_line_number.fetch_add(1, Relaxed);
+                atomic_line_number.add_assign(1);
                 let line_data = line.to_owned();
                 let line_contents = if line.is_empty() {
                     LineContents::Empty
                 } else if line.starts_with('#') {
                     LineContents::Comment
                 } else if line.starts_with(':') {
-                    DocumentParser::parse_metadata(line)
+                    DocumentParser::parse_metadata(line.trim())
                 } else if line.contains("->") {
-                    DocumentParser::parse_interaction(line)
+                    DocumentParser::parse_interaction(line.trim())
                 } else {
                     LineContents::Invalid
                 };
                 Line {
-                    line_number,
+                    line_number: atomic_line_number,
                     line_data,
                     line_contents,
                 }
@@ -48,13 +44,14 @@ impl DocumentParser {
 
     #[inline(always)]
     fn parse_interaction(line: &str) -> LineContents {
-        match INTERACTION_REGEX.captures(line) {
+        let line = line.to_owned();
+        match INTERACTION_REGEX.captures(&line) {
             None => LineContents::Invalid,
             Some(captures) => {
-                let from_name = FromParticipant(captures.index(1).trim().to_owned());
-                let to_name = ToParticipant(captures.index(2).trim().to_owned());
+                let from_name = FromParticipant(captures.index(1).to_owned());
+                let to_name = ToParticipant(captures.index(2).to_owned());
                 if captures.len() >= 3 && !captures.index(3).is_empty() {
-                    let msg = InteractionMessage(captures.index(3).trim().to_owned());
+                    let msg = InteractionMessage(captures.index(3).trim_start().to_owned());
                     LineContents::InteractionWithMessage(from_name, to_name, msg)
                 } else {
                     LineContents::Interaction(from_name, to_name)
@@ -65,7 +62,7 @@ impl DocumentParser {
 
     #[inline(always)]
     fn parse_metadata(line: &str) -> LineContents {
-        if let Some(o) = line.trim().split_once(|c: char| c.is_whitespace()) {
+        if let Some(o) = line.split_once(|c: char| c.is_whitespace()) {
             let x = match o.0 {
                 ":theme" => MetaDataType::Style(o.1.to_owned()),
                 ":title" => MetaDataType::Title(o.1.to_owned()),
@@ -80,12 +77,17 @@ impl DocumentParser {
     }
 }
 
+fn _str_to_vec(s: &str) -> Vec<String> {
+    s.lines().into_iter().map(|p| p.to_string()).collect_vec()
+}
+
 #[test]
 fn test_document_parser_with_invalid() {
     let text = "    Client -> Server: Message
     Server
     -> Server: Response";
-    let vec = DocumentParser::parse(text);
+    let sss = str_to_vec(text);
+    let vec = DocumentParser::parse(sss);
     assert_eq!(3, vec.len());
 
     // line 0
@@ -114,7 +116,8 @@ fn test_document_parser() {
     Client -> Server: Message
     Server -> Database
     Database -> Server: Response";
-    let vec = DocumentParser::parse(text);
+    let sss = str_to_vec(text);
+    let vec = DocumentParser::parse(sss);
     assert_eq!(5, vec.len());
 
     // line 0
