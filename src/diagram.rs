@@ -1,9 +1,9 @@
+use crate::model::Config;
+use crate::parsing::document::Document;
 use crate::parsing::interaction::InteractionParser;
 use crate::theme::Theme;
 use crate::{
-    model::{Header, Line},
-    parsing::participant::ParticipantParser,
-    InteractionSet, ParticipantSet,
+    model::Header, parsing::participant::ParticipantParser, InteractionSet, ParticipantSet,
 };
 
 // == Diagram =============================================
@@ -13,22 +13,24 @@ pub struct Diagram {
     pub header: Header,
     pub interactions: InteractionSet,
     pub participants: ParticipantSet,
+    pub config: Config,
 }
 
 // Renderabl diagram - with position coords etc based on the theme
 impl Diagram {
-    pub fn parse(document: Vec<Line>, theme: Theme) -> Diagram {
+    pub fn parse(document: Document, theme: Theme) -> Diagram {
         info!("Document: {:?}", document);
-        let participants = ParticipantParser::parse(&document, &theme);
+        let participants = ParticipantParser::parse(&document.lines, &theme);
 
         info!("Got Partics: {:#?}", participants);
-        let interactions = InteractionParser::parse(&document, &participants);
+        let interactions = InteractionParser::parse(&document.lines, &participants);
 
         Diagram {
             theme: Default::default(),
             header: Header {},
             interactions,
             participants,
+            config: document.config,
         }
     }
 }

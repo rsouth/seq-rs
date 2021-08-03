@@ -1,18 +1,20 @@
+use std::io;
+use std::io::Read;
+use std::time::Instant;
+
+use clap::ArgMatches;
+use itertools::Itertools;
+
+use sequencer::diagram::Diagram;
+use sequencer::model::{Config, LineContents, Source};
+use sequencer::parsing::document::DocumentParser;
+use sequencer::theme::Theme;
+
 mod cli;
 
 #[macro_use]
 extern crate log;
 extern crate pretty_env_logger;
-
-use sequencer::diagram::Diagram;
-use sequencer::parsing::document::DocumentParser;
-use sequencer::theme::Theme;
-use std::time::Instant;
-
-use clap::ArgMatches;
-use itertools::Itertools;
-use std::io;
-use std::io::Read;
 
 fn read_from_stdin() -> Vec<String> {
     let stdin = io::stdin();
@@ -34,32 +36,27 @@ fn read_from_stdin() -> Vec<String> {
     lines
 }
 
-#[derive(Debug)]
-enum Source {
-    StdIn,
-    File(String),
-    Example,
-}
-
-#[derive(Debug)]
-struct Config {
-    pub input_source: Source,
-    pub output_path: String,
-}
-
 fn main() {
     pretty_env_logger::init();
     let instant = Instant::now();
 
-    let config = ppaarrssee_aarrggss();
+    let config = parse_cli_args();
     println!("Config: {:?}", config);
 
     // load in data from file/stdin/etc
     let data = load_data(&config.input_source);
     println!("{:?}", data);
 
-    let document = DocumentParser::parse(data);
+    let document = DocumentParser::parse(&data, config);
     info!("Document: {:#?}", document);
+
+    document
+        .lines
+        .iter()
+        .filter(|p| p.line_contents == LineContents::Invalid)
+        .for_each(|p| {
+            warn!("Warning: Line {} is bad: {}", p.line_number, p.line_data);
+        });
 
     let theme = Theme::default();
     let diagram = Diagram::parse(document, theme);
@@ -74,7 +71,7 @@ fn main() {
     );
 }
 
-fn ppaarrssee_aarrggss() -> Config {
+fn parse_cli_args() -> Config {
     // parse CLI args
     let cli_options = cli::parse_args();
     let input_source = resolve_input_source(&cli_options);

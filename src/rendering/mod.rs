@@ -35,7 +35,10 @@ impl Diagram {
 
         self.participants.render(&mut rendering_context);
 
-        rendering_context.draw_target.write_png("v3.png").unwrap();
+        rendering_context
+            .draw_target
+            .write_png(&self.config.output_path)
+            .unwrap();
         info!("Wrote file...");
     }
 }

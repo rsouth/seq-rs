@@ -1,4 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use itertools::Itertools;
+use sequencer::model::{Config, Source};
 use sequencer::parsing::document::DocumentParser;
 
 pub fn get_text() -> &'static str {
@@ -17,10 +19,18 @@ pub fn get_text() -> &'static str {
      {AMPS} -> Client: "
 }
 
+fn str_to_vec(s: &str) -> Vec<String> {
+    s.lines().into_iter().map(|p| p.to_string()).collect_vec()
+}
+
 fn measure_parse_document(c: &mut Criterion) {
-    let input = get_text();
+    let input = str_to_vec(get_text());
+    let config = Config {
+        input_source: Source::Example,
+        output_path: "".to_string(),
+    };
     c.bench_function("parsing document", |b| {
-        b.iter(|| DocumentParser::parse(black_box(input)))
+        b.iter(|| DocumentParser::parse(black_box(&input), black_box(config.clone())))
     });
 }
 

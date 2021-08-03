@@ -77,3 +77,16 @@ pub struct Interaction {
     pub interaction_type: InteractionType,
     pub message: Option<Message>,
 }
+
+#[derive(Debug, Clone)]
+pub struct Config {
+    pub input_source: Source,
+    pub output_path: String,
+}
+
+#[derive(Debug, Clone)]
+pub enum Source {
+    StdIn,
+    File(String),
+    Example,
+}
