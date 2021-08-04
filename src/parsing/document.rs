@@ -27,17 +27,17 @@ impl DocumentParser {
         let mut atomic_line_number: usize = 0;
         let lines = line
             .iter()
-            .map(|line| line.trim())
+            // .map(|line| line.trim())
             .map(|line| {
-                let line_data = line.to_owned();
-                let line_contents = if line.is_empty() {
+                let line_data = line.trim().to_owned();
+                let line_contents = if line_data.is_empty() {
                     LineContents::Empty
-                } else if line.starts_with('#') {
+                } else if line_data.starts_with('#') {
                     LineContents::Comment
-                } else if line.starts_with(':') {
-                    DocumentParser::parse_metadata(line.trim())
+                } else if line_data.starts_with(':') {
+                    DocumentParser::parse_metadata(&line_data)
                 } else if line.contains("->") {
-                    DocumentParser::parse_interaction(line.trim())
+                    DocumentParser::parse_interaction(&line_data)
                 } else {
                     LineContents::Invalid
                 };
@@ -60,7 +60,7 @@ impl DocumentParser {
 
     #[inline(always)]
     fn parse_interaction(line: &str) -> LineContents {
-        let line = line.to_owned();
+        let line = line.trim().to_owned();
         match INTERACTION_REGEX.captures(&line) {
             None => LineContents::Invalid,
             Some(captures) => {
@@ -78,11 +78,11 @@ impl DocumentParser {
 
     #[inline(always)]
     fn parse_metadata(line: &str) -> LineContents {
-        if let Some(o) = line.split_once(|c: char| c.is_whitespace()) {
+        if let Some(o) = line.trim().split_once(|c: char| c.is_whitespace()) {
             let x = match o.0 {
-                ":theme" => MetaDataType::Style(o.1.to_owned()),
-                ":title" => MetaDataType::Title(o.1.to_owned()),
-                ":author" => MetaDataType::Author(o.1.to_owned()),
+                ":theme" => MetaDataType::Style(o.1.trim().to_owned()),
+                ":title" => MetaDataType::Title(o.1.trim().to_owned()),
+                ":author" => MetaDataType::Author(o.1.trim().to_owned()),
                 ":date" => MetaDataType::Date,
                 &_ => MetaDataType::Invalid,
             };
@@ -91,6 +91,19 @@ impl DocumentParser {
             LineContents::Invalid
         }
     }
+}
+
+#[test]
+fn test_parse_metadata() {
+    assert_eq!(
+        LineContents::MetaData(MetaDataType::Title("Test".to_string())),
+        DocumentParser::parse_metadata(":title Test")
+    );
+
+    assert_eq!(
+        LineContents::MetaData(MetaDataType::Title("Test".to_string())),
+        DocumentParser::parse_metadata("  :title   Test  ")
+    );
 }
 
 #[test]
@@ -148,6 +161,10 @@ fn test_document_parser() {
     assert_eq!(LineContents::Empty, vec.lines[0].line_contents);
     assert_eq!("", vec.lines[0].line_data);
 
+    eprintln!("{:?}", vec.lines[0]);
+    eprintln!("{:?}", vec.lines[1]);
+    eprintln!("{:?}", vec.lines[2]);
+
     // line 1
     assert_eq!(1, vec.lines[1].line_number);
     assert_eq!(
@@ -189,6 +206,7 @@ fn test_document_parser() {
     assert_eq!("Database -> Server: Response", vec.lines[4].line_data);
 }
 
+//noinspection RsExternalLinter
 fn str_to_vec(s: &str) -> Vec<String> {
     s.lines().into_iter().map(|p| p.to_string()).collect_vec()
 }

@@ -18,12 +18,11 @@ extern crate pretty_env_logger;
 
 fn read_from_stdin() -> Vec<String> {
     let stdin = io::stdin();
-    let mut stdin = stdin.lock(); // locking is optional
-
-    let mut line = String::new();
+    let mut stdin = stdin.lock();
     let mut lines = Vec::new();
 
     // Could also `match` on the `Result` if you wanted to handle `Err`
+    let mut line = String::new();
     while let Ok(n_bytes) = stdin.read_to_string(&mut line) {
         if n_bytes == 0 {
             break;
