@@ -16,7 +16,7 @@ pathfinder_geometry = "0.5.1"
 euclid = "0.22.6"
 smallvec = "1.6.1"
 lazy_static = "1.4.0"
-fontdue = "0.5.2"
+fontdue = "0.9.3"
 #rayon = "1.5.1"
 #ordered-float = "2.7.0"
 
