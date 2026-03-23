@@ -1,11 +1,11 @@
 use log::info;
 
-use crate::model::Config;
+use crate::model::{Config, Header, LineContents, MetaDataType};
 use crate::parsing::document::Document;
 use crate::parsing::interaction::InteractionParser;
 use crate::theme::Theme;
 use crate::{
-    model::Header, parsing::participant::ParticipantParser, InteractionSet, ParticipantSet,
+    parsing::participant::ParticipantParser, InteractionSet, ParticipantSet,
 };
 
 // == Diagram =============================================
@@ -21,6 +21,7 @@ pub struct Diagram {
 impl Diagram {
     pub fn parse(document: Document, theme: Theme) -> Diagram {
         info!("Document: {:?}", document);
+        let header = Self::extract_header(&document.lines);
         let participants = ParticipantParser::parse(&document.lines, &theme);
 
         info!("Got participants: {:#?}", participants);
@@ -28,10 +29,23 @@ impl Diagram {
 
         Diagram {
             theme,
-            header: Header {},
+            header,
             interactions,
             participants,
             config: document.config,
         }
+    }
+
+    fn extract_header(lines: &[crate::model::Line]) -> Header {
+        let mut title = None;
+        let mut author = None;
+        for line in lines {
+            match &line.line_contents {
+                LineContents::MetaData(MetaDataType::Title(t)) => title = Some(t.clone()),
+                LineContents::MetaData(MetaDataType::Author(a)) => author = Some(a.clone()),
+                _ => {}
+            }
+        }
+        Header { title, author }
     }
 }

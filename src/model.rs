@@ -43,8 +43,11 @@ pub struct ToParticipant(pub String);
 pub struct InteractionMessage(pub String);
 
 // == Header ==============================================
-#[derive(Debug)]
-pub struct Header {}
+#[derive(Debug, Default)]
+pub struct Header {
+    pub title: Option<String>,
+    pub author: Option<String>,
+}
 
 // == Participant =========================================
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]

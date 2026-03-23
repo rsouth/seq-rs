@@ -74,7 +74,12 @@ impl DocumentParser {
 
     #[inline]
     fn parse_metadata(line: &str) -> LineContents {
-        if let Some((key, value)) = line.trim().split_once(|c: char| c.is_whitespace()) {
+        let trimmed = line.trim();
+        // `:date` may appear with no value; handle it before the split_once below.
+        if trimmed == ":date" {
+            return LineContents::MetaData(MetaDataType::Date);
+        }
+        if let Some((key, value)) = trimmed.split_once(|c: char| c.is_whitespace()) {
             let meta = match key {
                 ":theme" => MetaDataType::Style(value.trim().to_owned()),
                 ":title" => MetaDataType::Title(value.trim().to_owned()),
@@ -290,5 +295,13 @@ mod tests {
     fn test_document_is_valid() {
         let doc = DocumentParser::parse(&str_to_vec("Client -> Server"), make_config());
         assert!(doc.is_valid);
+    }
+
+    #[test]
+    fn test_parse_metadata_date_bare() {
+        assert_eq!(
+            LineContents::MetaData(MetaDataType::Date),
+            DocumentParser::parse_metadata(":date")
+        );
     }
 }

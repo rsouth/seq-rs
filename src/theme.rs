@@ -11,6 +11,8 @@ pub struct Theme {
     pub document_border_width: usize,
     pub partic_padding: usize,
     pub partic_h_gap: usize,
+    /// Vertical distance between successive interaction arrows in pixels.
+    pub interaction_row_height: usize,
 }
 
 impl Default for Theme {
@@ -23,7 +25,8 @@ impl Default for Theme {
             message_font_px: 16,
             document_border_width: 10,
             partic_padding: 5,
-            partic_h_gap: 20,
+            partic_h_gap: 80,
+            interaction_row_height: 50,
         }
     }
 }
