@@ -1,12 +1,11 @@
-use clap::{crate_version, App, AppSettings, Arg, ArgMatches};
+use clap::{crate_version, Arg, ArgMatches, Command};
 
 pub const INPUT_FILE: &str = "input";
 pub const EXAMPLE: &str = "example";
 pub const OUTPUT_FILE: &str = "output";
 
 pub(crate) fn parse_args() -> ArgMatches {
-    App::new("Sequencer")
-        .setting(AppSettings::ColoredHelp)
+    Command::new("Sequencer")
         .about("does awesome things")
         .version(crate_version!())
         .after_help("Check github.com/rsouth/seq-rs for the latest release")
@@ -14,23 +13,20 @@ pub(crate) fn parse_args() -> ArgMatches {
             Arg::new(INPUT_FILE)
                 .short('f')
                 .long("file")
-                .takes_value(true)
+                .num_args(1)
                 .required(false),
         )
         .arg(
             Arg::new(EXAMPLE)
                 .short('e')
-                .about("use example file")
+                .help("use example file")
+                .num_args(0)
                 .conflicts_with(INPUT_FILE),
         )
-        // .arg("<output> 'sets an output file' 'test'")
         .arg(
             Arg::new(OUTPUT_FILE)
-                // .last(true)
-                .about("sets an output file")
-                // .long_about("can be either with or without .png extension")
-                .required(true), // .required_unless_present() // todo when we add 'validate' mode
+                .help("sets an output file")
+                .required(true),
         )
-        // ideas: override theme, select output file type (png vs jpg, does anyone care?)
         .get_matches()
 }

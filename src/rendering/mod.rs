@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use log::info;
 use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource, Source, StrokeStyle};
 
 use super::{diagram::Diagram, model::Participant, theme::Theme, ParticipantSet};
@@ -16,12 +17,6 @@ pub struct Rect {
     pub y: usize,
     pub w: usize,
     pub h: usize,
-}
-
-impl Rect {
-    fn _new(x: usize, y: usize, w: usize, h: usize) -> Self {
-        Rect { x, y, w, h }
-    }
 }
 
 pub trait Render {
@@ -47,13 +42,13 @@ impl RenderSet for ParticipantSet {
     fn render(&self, context: &mut RenderContext) {
         self.iter().sorted_by_key(|k| k.index).for_each(|p| {
             p.render(context);
-        })
+        });
     }
 }
 
 impl Render for Participant {
     fn render(&self, context: &mut RenderContext) {
-        let participant_padding = context.theme.partic_padding; // todo get from theme.
+        let participant_padding = context.theme.partic_padding;
 
         let mut path = PathBuilder::new();
         path.rect(
@@ -91,24 +86,28 @@ impl Render for Participant {
 }
 
 impl Sizable for Diagram {
-    fn size(&self, _theme: &Theme) -> Size {
-        let interaction_height = self.interactions.iter().map(|p| p.index).max().unwrap() as u32;
+    fn size(&self, theme: &Theme) -> Size {
+        let interaction_height = self.interactions.iter().map(|p| p.index).max().unwrap_or(0);
         let height: i32 =
-            ((2 * _theme.document_border_width) + (interaction_height * 20) as usize) as i32;
+            ((2 * theme.document_border_width) + (interaction_height as usize * 20)) as i32;
 
-        let w = self.participants.iter().max_by_key(|p| p.rect.x).unwrap();
-        let width: i32 = (w.rect.x
-            + w.rect.w
+        let max_x_participant = self
+            .participants
+            .iter()
+            .max_by_key(|p| p.rect.x)
+            .unwrap();
+        let width: i32 = (max_x_participant.rect.x
+            + max_x_participant.rect.w
             + (2 * self.theme.partic_padding)
-            + (2 * _theme.document_border_width)) as i32;
+            + (2 * theme.document_border_width)) as i32;
 
         Size { height, width }
     }
 }
 
 pub struct RenderContext {
-    theme: Theme,
-    draw_target: DrawTarget,
+    pub theme: Theme,
+    pub draw_target: DrawTarget,
 }
 
 impl RenderContext {
@@ -125,6 +124,6 @@ pub trait Sizable {
 
 #[derive(Debug)]
 pub struct Size {
-    height: i32,
-    width: i32,
+    pub height: i32,
+    pub width: i32,
 }

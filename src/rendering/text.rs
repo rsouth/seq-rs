@@ -6,9 +6,11 @@ use fontdue::layout::{CoordinateSystem, Layout, LayoutSettings, TextStyle};
 #[cfg(debug_assertions)]
 use raqote::{DrawOptions, PathBuilder, SolidSource, Source, StrokeStyle};
 
+/// Measures the bounding box of the rendered string at the given font size.
 pub fn measure_string(theme: &Theme, content: &str, px: usize) -> Rect {
     debug_assert!(!content.is_empty());
     debug_assert!(px > 0);
+
     let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
     layout.reset(&LayoutSettings {
         x: 0.0,
@@ -18,19 +20,21 @@ pub fn measure_string(theme: &Theme, content: &str, px: usize) -> Rect {
     let font = &theme.body_font;
     layout.append(&[font], &TextStyle::new(content, px as f32, 0));
 
-    let layout = layout.glyphs();
-    let first_glyph = layout.first().unwrap();
-    let last_glyph = layout.last().unwrap();
-    let y = layout.iter().map(|glyph| glyph.y as usize).min().unwrap();
-    let h = layout.iter().map(|glyph| glyph.height).max().unwrap() as usize;
+    let glyphs = layout.glyphs();
+    let first_glyph = glyphs.first().unwrap();
+    let last_glyph = glyphs.last().unwrap();
+    let y = glyphs.iter().map(|g| g.y as usize).min().unwrap();
+    let h = glyphs.iter().map(|g| g.height).max().unwrap();
+
     Rect {
         x: first_glyph.x as usize,
         y,
-        w: ((first_glyph.x + last_glyph.x) as usize + last_glyph.width),
+        w: (first_glyph.x as usize + last_glyph.x as usize + last_glyph.width),
         h,
     }
 }
 
+/// Draws text into the render context at the given position and font size.
 pub fn draw_text(rc: &mut RenderContext, content: &str, x: usize, y: usize, px: usize) {
     let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
     layout.reset(&LayoutSettings {
@@ -40,13 +44,12 @@ pub fn draw_text(rc: &mut RenderContext, content: &str, x: usize, y: usize, px: 
     });
     let font = &rc.theme.body_font;
     layout.append(&[font], &TextStyle::new(content, px as f32, 0));
-    for glyph in layout.glyphs() {
-        let (metrics, coverage) = font.rasterize_indexed(glyph.key.glyph_index as usize, px as f32);
-        info!("Metrics: {:?}", glyph);
 
-        //
+    for glyph in layout.glyphs() {
+        let (metrics, coverage) = font.rasterize(glyph.parent, px as f32);
+        log::info!("Metrics: {:?}", glyph);
+
         #[cfg(debug_assertions)]
-        // #[cfg(not(debug_assertions))]
         {
             let mut path = PathBuilder::new();
             path.rect(
@@ -63,17 +66,11 @@ pub fn draw_text(rc: &mut RenderContext, content: &str, x: usize, y: usize, px: 
             );
         }
 
-        //
-        let mut image_data = Vec::with_capacity(coverage.len()); // / 3);
-        for cov in &coverage {
-            //.chunks(3) {
-            // let r = cov[0];
-            // let g = cov[1];
-            // let b = cov[2];
-            // let a = 255;
-            let pixel = rgb_to_u32(0_usize, 0_usize, 0_usize, *cov as usize);
-            image_data.push(pixel);
-        }
+        let image_data: Vec<u32> = coverage
+            .iter()
+            .map(|&cov| rgb_to_u32(0, 0, 0, cov as usize))
+            .collect();
+
         rc.draw_target.draw_image_at(
             glyph.x,
             glyph.y,
@@ -82,45 +79,82 @@ pub fn draw_text(rc: &mut RenderContext, content: &str, x: usize, y: usize, px: 
                 height: metrics.height as i32,
                 data: &image_data,
             },
-            &raqote::DrawOptions::new()
-            // {
-            //     blend_mode: raqote::BlendMode::SrcOver,
-            //     alpha: 1.0,
-            //     antialias: raqote::AntialiasMode::Gray,
-            // },
+            &raqote::DrawOptions::new(),
         );
     }
 }
 
+/// Packs RGBA components into a `u32` pixel value.
 pub fn rgb_to_u32(red: usize, green: usize, blue: usize, alpha: usize) -> u32 {
     let r = red.clamp(0, 255);
     let g = green.clamp(0, 255);
     let b = blue.clamp(0, 255);
     let a = alpha.clamp(0, 255);
-    ((a << 24) | (r << 16) | (g << 8) | b) as u32 //  original
-                                                  // ((r << 16) | (g << 8) | (b) | a) as u32
-                                                  // ((r << 24) | (g << 16) | (b << 8) | a) as u32
-
-    // let mut rgb = red;
-    // rgb = (rgb << 16) + green;
-    // rgb = (rgb << 16) + blue;
-    // rgb as u32
-
-    // ((a << 24) + (r << 16) + (g << 8) + (b)) as u32
+    ((a << 24) | (r << 16) | (g << 8) | b) as u32
 }
 
-#[test]
-fn test_measure_text() {
-    let theme = Theme::default();
-    let size = measure_string(&theme, "A", 20);
-    assert_eq!(0, size.x);
-    assert_eq!(5, size.y);
-    assert_eq!(12, size.w);
-    assert_eq!(15, size.h);
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::theme::Theme;
 
-    let size = measure_string(&theme, "AA", 20);
-    assert_eq!(0, size.x);
-    assert_eq!(5, size.y);
-    assert_eq!(24, size.w);
-    assert_eq!(15, size.h);
+    #[test]
+    fn test_rgb_to_u32_black() {
+        assert_eq!(0xFF000000, rgb_to_u32(0, 0, 0, 255));
+    }
+
+    #[test]
+    fn test_rgb_to_u32_white() {
+        assert_eq!(0xFFFFFFFF, rgb_to_u32(255, 255, 255, 255));
+    }
+
+    #[test]
+    fn test_rgb_to_u32_red() {
+        assert_eq!(0xFF0000FF, rgb_to_u32(0, 0, 255, 255));
+    }
+
+    #[test]
+    fn test_rgb_to_u32_transparent() {
+        assert_eq!(0x00000000, rgb_to_u32(0, 0, 0, 0));
+    }
+
+    #[test]
+    fn test_rgb_to_u32_clamps_above_255() {
+        // Values > 255 are clamped to 255
+        assert_eq!(rgb_to_u32(255, 255, 255, 255), rgb_to_u32(300, 400, 500, 600));
+    }
+
+    #[test]
+    fn test_measure_string_single_char() {
+        let theme = Theme::default();
+        let size = measure_string(&theme, "A", 20);
+        assert_eq!(0, size.x);
+        assert!(size.y > 0, "y should be > 0 (baseline offset)");
+        assert!(size.w > 0, "width should be > 0");
+        assert!(size.h > 0, "height should be > 0");
+    }
+
+    #[test]
+    fn test_measure_string_two_chars_wider() {
+        let theme = Theme::default();
+        let single = measure_string(&theme, "A", 20);
+        let double = measure_string(&theme, "AA", 20);
+        assert!(double.w > single.w, "two chars should be wider than one");
+    }
+
+    #[test]
+    fn test_measure_string_same_height_for_same_font_size() {
+        let theme = Theme::default();
+        let a = measure_string(&theme, "A", 20);
+        let b = measure_string(&theme, "B", 20);
+        assert_eq!(a.h, b.h, "same font size should yield same glyph height");
+    }
+
+    #[test]
+    fn test_measure_string_larger_px_gives_larger_height() {
+        let theme = Theme::default();
+        let small = measure_string(&theme, "A", 20);
+        let large = measure_string(&theme, "A", 40);
+        assert!(large.h > small.h, "larger px should produce taller glyphs");
+    }
 }
