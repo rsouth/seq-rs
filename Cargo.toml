@@ -2,28 +2,24 @@
 name = "sequencer"
 version = "0.1.0"
 authors = ["Richard South <southy98@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = "0.4.14"
-pretty_env_logger = "0.4.0"
-regex = "1.5.4"
-itertools = "0.10.1"
-raqote = { version = "0.8.0", features = ["pathfinder_geometry"] }
-pathfinder_geometry = "0.5.1"
-euclid = "0.22.6"
-smallvec = "1.6.1"
-lazy_static = "1.4.0"
-fontdue = "0.5.2"
-#rayon = "1.5.1"
-#ordered-float = "2.7.0"
-
-clap = "3.0.0-beta.2"
+log = "0.4"
+pretty_env_logger = "0.5"
+regex = "1"
+itertools = "0.13"
+raqote = { version = "0.8", features = ["pathfinder_geometry"] }
+pathfinder_geometry = "0.5"
+euclid = "0.22"
+smallvec = "1"
+fontdue = "0.9"
+clap = { version = "4", features = ["derive", "cargo"] }
 
 [dev-dependencies]
-criterion = { version = "0.3", features = ["html_reports"] }
+criterion = { version = "0.5", features = ["html_reports"] }
 
 [[bench]]
 name = "benchmark_diagram_parsing"
@@ -33,10 +29,10 @@ harness = false
 name = "benchmark_document_parsing"
 harness = false
 
-#[[bench]]
-#name = "benchmark_rendering"
-#harness = false
+[[bench]]
+name = "benchmark_rendering"
+harness = false
 
-#[[bench]]
-#name = "text_benchmarks"
-#harness = false
+[[bench]]
+name = "text_benchmarks"
+harness = false
