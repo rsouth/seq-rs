@@ -19,7 +19,7 @@ fontdue = "0.9"
 clap = { version = "4", features = ["derive", "cargo"] }
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { version = "0.8", features = ["html_reports"] }
 
 [[bench]]
 name = "benchmark_diagram_parsing"
