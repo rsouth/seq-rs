@@ -1,5 +1,4 @@
-use core::default::Default;
-use fontdue::Font;
+use fontdue::{Font, FontSettings};
 
 // == Theme ===============================================
 #[derive(Debug, Clone)]
@@ -17,10 +16,10 @@ pub struct Theme {
 impl Default for Theme {
     fn default() -> Self {
         Theme {
-            title_font: Theme::load_font(include_bytes!("../assets/Roboto-Thin.ttf") as &[u8]),
-            body_font: Theme::load_font(include_bytes!("../assets/Roboto-Thin.ttf") as &[u8]),
+            title_font: Theme::load_font(include_bytes!("../assets/Roboto-Thin.ttf")),
+            body_font: Theme::load_font(include_bytes!("../assets/Roboto-Thin.ttf")),
             title_font_px: 30,
-            partic_font_px: 30, // 18,
+            partic_font_px: 30,
             message_font_px: 16,
             document_border_width: 10,
             partic_padding: 5,
@@ -31,13 +30,11 @@ impl Default for Theme {
 
 impl Theme {
     fn load_font(font_data: &[u8]) -> Font {
-        // Parse it into the font type.
-        let settings = fontdue::FontSettings {
-            // ..fontdue::FontSettings::default()
+        let settings = FontSettings {
             collection_index: 0,
             scale: 18.0,
+            load_substitutions: true,
         };
-
-        fontdue::Font::from_bytes(font_data, settings).unwrap()
+        Font::from_bytes(font_data, settings).unwrap()
     }
 }

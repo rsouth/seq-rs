@@ -4,6 +4,7 @@ use std::time::Instant;
 
 use clap::ArgMatches;
 use itertools::Itertools;
+use log::{info, warn};
 
 use sequencer::diagram::Diagram;
 use sequencer::model::{Config, LineContents, Source};
@@ -12,22 +13,16 @@ use sequencer::theme::Theme;
 
 mod cli;
 
-#[macro_use]
-extern crate log;
-extern crate pretty_env_logger;
-
 fn read_from_stdin() -> Vec<String> {
     let stdin = io::stdin();
     let mut stdin = stdin.lock();
     let mut lines = Vec::new();
 
-    // Could also `match` on the `Result` if you wanted to handle `Err`
     let mut line = String::new();
     while let Ok(n_bytes) = stdin.read_to_string(&mut line) {
         if n_bytes == 0 {
             break;
         }
-        // println!("{}", line);
         lines.push(line.clone());
         line.clear();
     }
@@ -71,12 +66,13 @@ fn main() {
 }
 
 fn parse_cli_args() -> Config {
-    // parse CLI args
     let cli_options = cli::parse_args();
     let input_source = resolve_input_source(&cli_options);
 
-    // todo 'document config' here - can override things like the :theme (from args) etc.
-    let output_path = cli_options.value_of(cli::OUTPUT_FILE).unwrap().to_string();
+    let output_path = cli_options
+        .get_one::<String>(cli::OUTPUT_FILE)
+        .cloned()
+        .unwrap_or_default();
     Config {
         input_source,
         output_path,
@@ -94,7 +90,6 @@ fn load_data(src: &Source) -> Vec<String> {
             std::fs::read_to_string(file_name)
                 .unwrap()
                 .lines()
-                .into_iter()
                 .map(|p| p.to_string())
                 .collect_vec()
         }
@@ -106,10 +101,10 @@ fn load_data(src: &Source) -> Vec<String> {
 }
 
 fn resolve_input_source(options: &ArgMatches) -> Source {
-    if options.is_present(cli::EXAMPLE) {
+    if options.contains_id(cli::EXAMPLE) && *options.get_one::<bool>(cli::EXAMPLE).unwrap_or(&false) {
         Source::Example
-    } else if options.is_present(cli::INPUT_FILE) {
-        Source::File(options.value_of(cli::INPUT_FILE).unwrap().to_string())
+    } else if let Some(file) = options.get_one::<String>(cli::INPUT_FILE) {
+        Source::File(file.clone())
     } else {
         Source::StdIn
     }
@@ -130,7 +125,6 @@ pub fn get_text() -> Vec<String> {
      Left -> Right
      # {AMPS} -> Client: "
         .lines()
-        .into_iter()
         .map(|p| p.to_string())
         .collect_vec()
 }
