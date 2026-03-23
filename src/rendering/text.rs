@@ -109,7 +109,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rgb_to_u32_red() {
+    fn test_rgb_to_u32_blue() {
         assert_eq!(0xFF0000FF, rgb_to_u32(0, 0, 255, 255));
     }
 
