@@ -101,7 +101,7 @@ fn load_data(src: &Source) -> Vec<String> {
 }
 
 fn resolve_input_source(options: &ArgMatches) -> Source {
-    if options.contains_id(cli::EXAMPLE) && *options.get_one::<bool>(cli::EXAMPLE).unwrap_or(&false) {
+    if *options.get_one::<bool>(cli::EXAMPLE).unwrap_or(&false) {
         Source::Example
     } else if let Some(file) = options.get_one::<String>(cli::INPUT_FILE) {
         Source::File(file.clone())
