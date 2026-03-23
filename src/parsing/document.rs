@@ -60,8 +60,8 @@ impl DocumentParser {
         match interaction_regex().captures(line) {
             None => LineContents::Invalid,
             Some(captures) => {
-                let from_name = FromParticipant(captures[1].to_owned());
-                let to_name = ToParticipant(captures[2].trim_end().to_owned());
+                let from_name = FromParticipant(captures[1].trim().to_owned());
+                let to_name = ToParticipant(captures[2].trim().to_owned());
                 if captures.len() >= 3 && !captures[3].is_empty() {
                     let msg = InteractionMessage(captures[3].trim_start().to_owned());
                     LineContents::InteractionWithMessage(from_name, to_name, msg)
