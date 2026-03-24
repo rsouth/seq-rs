@@ -21,7 +21,7 @@ The main execution path is:
 
 1. `src/cli.rs`
    - defines the CLI with `clap`
-   - supports `--file`, `-e/--example`, and a required output path
+   - supports `--file`, `-e`, and a required output path
 2. `src/main.rs`
    - resolves the input source
    - loads raw text from a file, stdin, or the built-in example
@@ -51,32 +51,32 @@ The main execution path is:
 
 ### Root
 
-- `/home/runner/work/seq-rs/seq-rs/Cargo.toml`  
+- `Cargo.toml`  
   Rust package manifest, dependencies, and benchmark declarations.
-- `/home/runner/work/seq-rs/seq-rs/README.md`  
+- `README.md`  
   Public project overview and quick-start documentation.
-- `/home/runner/work/seq-rs/seq-rs/AGENTS.md`  
+- `AGENTS.md`  
   This contributor/agent guide.
 
 ### Source code
 
-- `/home/runner/work/seq-rs/seq-rs/src/main.rs`  
+- `src/main.rs`  
   Runtime entry point and built-in example DSL.
-- `/home/runner/work/seq-rs/seq-rs/src/cli.rs`  
+- `src/cli.rs`  
   CLI definitions.
-- `/home/runner/work/seq-rs/seq-rs/src/lib.rs`  
+- `src/lib.rs`  
   Public module declarations and shared type aliases.
-- `/home/runner/work/seq-rs/seq-rs/src/model.rs`  
+- `src/model.rs`  
   Shared domain types like `Line`, `Participant`, `Interaction`, and `Config`.
-- `/home/runner/work/seq-rs/seq-rs/src/diagram.rs`  
+- `src/diagram.rs`  
   Converts a parsed `Document` into a `Diagram`.
-- `/home/runner/work/seq-rs/seq-rs/src/parsing/document.rs`  
+- `src/parsing/document.rs`  
   First-pass parser from raw strings into `LineContents`.
-- `/home/runner/work/seq-rs/seq-rs/src/parsing/participant.rs`  
+- `src/parsing/participant.rs`  
   Participant discovery and layout preparation.
-- `/home/runner/work/seq-rs/seq-rs/src/parsing/interaction.rs`  
+- `src/parsing/interaction.rs`  
   Interaction construction and direction detection.
-- `/home/runner/work/seq-rs/seq-rs/src/rendering/mod.rs`  
+- `src/rendering/mod.rs`  
   Draw target setup, sizing, and participant rendering.
 - `/home/runner/work/seq-rs/seq-rs/src/rendering/text.rs`  
   Text measurement and glyph drawing.
@@ -115,8 +115,8 @@ The document parser is line-based and intentionally permissive:
 - empty lines become `LineContents::Empty`
 - `#` lines become comments
 - `:` lines are parsed as metadata
-- lines containing `->` are parsed as interactions
-- anything else becomes `Invalid`
+- lines containing `->` are attempted as interactions; if they don't match the interaction pattern they become `Invalid`
+- all other lines become `Invalid`
 
 Metadata currently recognizes:
 
