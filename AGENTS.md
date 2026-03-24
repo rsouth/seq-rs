@@ -1,225 +1,370 @@
-# AGENTS.md
+# AGENTS.md — seq-rs Codebase Guide
 
-This file is a working guide for people and coding agents making changes in `rsouth/seq-rs`.
+This document is a reference for AI coding agents and contributors working in this repository. It describes the project purpose, architecture, module structure, data flow, testing approach, and development conventions.
 
-## Project summary
+---
 
-`seq-rs` is a Rust sequence-diagram generator. The repository builds the `sequencer` crate/binary, which parses a lightweight text DSL and writes a PNG diagram to disk.
+## Project Overview
 
-Core responsibilities:
+**seq-rs** (package name: `sequencer`) is a command-line tool written in Rust that converts a simple plain-text sequence diagram DSL into a rendered PNG image.
 
-- parse line-oriented diagram input
-- discover participants and interactions
-- compute simple diagram layout
-- render diagram output with embedded fonts
+The typical workflow is:
 
-The current implementation is intentionally compact, so most behavior is easy to trace from `main.rs` into a handful of parser and rendering modules.
+```
+text input (file / stdin / built-in example)
+  → DocumentParser    (parse lines into typed LineContents)
+  → ParticipantParser (extract participants + compute geometry)
+  → InteractionParser (extract arrows / interactions)
+  → Diagram           (assembled data model)
+  → Render            (raqote 2D drawing → PNG file)
+```
 
-## High-level architecture
+---
 
-The main execution path is:
+## Technology Stack
 
-1. `src/cli.rs`
-   - defines the CLI with `clap`
-   - supports `--file`, `-e`, and a required output path
-2. `src/main.rs`
-   - resolves the input source
-   - loads raw text from a file, stdin, or the built-in example
-   - builds `Config`
-   - runs `DocumentParser::parse`
-   - creates `Theme::default()`
-   - calls `Diagram::parse(...)`
-   - writes the final PNG with `diagram.render()`
-3. `src/parsing/document.rs`
-   - classifies each line as empty, comment, metadata, interaction, or invalid
-   - stores parsed lines in `Document`
-4. `src/parsing/participant.rs`
-   - finds all participants referenced by interactions
-   - assigns participant indexes in first-seen order
-   - computes x positions and participant rectangles using measured text width
-5. `src/parsing/interaction.rs`
-   - turns parsed interaction lines into `Interaction` values
-   - derives interaction direction from participant indexes
-6. `src/rendering/`
-   - `mod.rs` creates the drawing surface and renders participants
-   - `text.rs` measures and rasterizes text with `fontdue`
-7. `src/theme.rs`
-   - embeds fonts from `assets/`
-   - stores layout constants such as font sizes, padding, and gaps
+| Concern | Crate / Tool |
+|---|---|
+| Language | Rust (edition 2021) |
+| Build & package manager | Cargo |
+| CLI argument parsing | `clap` 4 (with `derive` + `cargo` features) |
+| 2D rendering | `raqote` 0.8 (with `pathfinder_geometry`) |
+| Font rasterisation & layout | `fontdue` 0.9 |
+| Geometry primitives | `euclid`, `pathfinder_geometry` |
+| Regex parsing | `regex` 1 |
+| Iterator utilities | `itertools` 0.14 |
+| Logging | `log` 0.4 + `pretty_env_logger` 0.5 |
+| Benchmarking | `criterion` 0.8 |
+| CI | GitHub Actions |
+| Code coverage | `cargo-tarpaulin` + Codecov |
 
-## Important files and directories
+---
 
-### Root
+## Directory Structure
 
-- `Cargo.toml`  
-  Rust package manifest, dependencies, and benchmark declarations.
-- `README.md`  
-  Public project overview and quick-start documentation.
-- `AGENTS.md`  
-  This contributor/agent guide.
+```
+seq-rs/
+├── Cargo.toml                   # Package metadata and dependencies
+├── README.md
+├── AGENTS.md                    # This file
+├── assets/
+│   ├── OpenSans-Regular.ttf     # Bundled fonts (included at compile time)
+│   ├── Roboto-Black.ttf
+│   └── Roboto-Thin.ttf          # Used by Theme::default()
+├── benches/
+│   ├── benchmark_diagram_parsing.rs   # Criterion: participant + interaction parsing
+│   ├── benchmark_document_parsing.rs  # Criterion: document parsing
+│   ├── benchmark_rendering.rs         # Criterion: full diagram parse+render cycle
+│   └── text_benchmarks.rs             # Criterion: measure_string, rgb_to_u32
+├── docs/
+│   └── example.png              # Example output image (referenced by README)
+├── src/
+│   ├── main.rs       # Binary entry point
+│   ├── cli.rs        # CLI argument definitions (clap)
+│   ├── lib.rs        # Library root; module exports; type aliases
+│   ├── mod.rs        # Legacy file — all content commented out; not used
+│   ├── model.rs      # Core domain types
+│   ├── diagram.rs    # Diagram struct + parse() orchestration
+│   ├── theme.rs      # Theme (fonts, sizes, spacing)
+│   ├── parsing/
+│   │   ├── mod.rs         # Re-exports document, interaction, participant
+│   │   ├── document.rs    # DocumentParser: text → Vec<Line>
+│   │   ├── interaction.rs # InteractionParser: Vec<Line> → InteractionSet
+│   │   └── participant.rs # ParticipantParser: Vec<Line> → ParticipantSet
+│   └── rendering/
+│       ├── mod.rs    # Render traits, RenderContext, Diagram::render(), Participant::render()
+│       └── text.rs   # measure_string() and draw_text() via fontdue
+└── .github/
+    └── workflows/
+        ├── build_and_test.yml  # cargo build + cargo test on push/PR to main
+        └── codecov.yml         # cargo-tarpaulin coverage upload to Codecov
+```
 
-### Source code
+---
 
-- `src/main.rs`  
-  Runtime entry point and built-in example DSL.
-- `src/cli.rs`  
-  CLI definitions.
-- `src/lib.rs`  
-  Public module declarations and shared type aliases.
-- `src/model.rs`  
-  Shared domain types like `Line`, `Participant`, `Interaction`, and `Config`.
-- `src/diagram.rs`  
-  Converts a parsed `Document` into a `Diagram`.
-- `src/parsing/document.rs`  
-  First-pass parser from raw strings into `LineContents`.
-- `src/parsing/participant.rs`  
-  Participant discovery and layout preparation.
-- `src/parsing/interaction.rs`  
-  Interaction construction and direction detection.
-- `src/rendering/mod.rs`  
-  Draw target setup, sizing, and participant rendering.
-- `/home/runner/work/seq-rs/seq-rs/src/rendering/text.rs`  
-  Text measurement and glyph drawing.
-- `/home/runner/work/seq-rs/seq-rs/src/theme.rs`  
-  Default font loading and visual spacing.
+## Source Module Details
 
-### Other directories
+### `src/main.rs` — Binary entry point
 
-- `/home/runner/work/seq-rs/seq-rs/assets/`  
-  Bundled fonts used by the renderer.
-- `/home/runner/work/seq-rs/seq-rs/benches/`  
-  Criterion benchmarks for parsing and rendering.
-- `/home/runner/work/seq-rs/seq-rs/docs/`  
-  Checked-in documentation assets, including the example output PNG used in `README.md`.
-- `/home/runner/work/seq-rs/seq-rs/.github/workflows/build_and_test.yml`  
-  Canonical CI build/test steps.
+- Initialises `pretty_env_logger` for log output controlled by `RUST_LOG`.
+- Calls `parse_cli_args()` to read CLI flags via `cli.rs`.
+- Calls `load_data()` to read lines from a file path, stdin, or the built-in example string.
+- Runs the full parsing + rendering pipeline.
+- Warns (via `log::warn!`) about any lines classified as `LineContents::Invalid`.
 
-## Data model quick reference
+### `src/cli.rs` — CLI argument parsing
 
-Important types in `src/model.rs`:
+Three arguments are defined using `clap` 4's builder API:
 
-- `Config` — selected input source and output path
-- `Source` — stdin, file, or built-in example
-- `Line` — original line text plus parsed classification
-- `LineContents` — parsed line variants
-- `Participant` — participant name, index, activity range, and layout rectangle
-- `Interaction` — from/to participants, direction, optional message
-- `InteractionType` — left-to-right, right-to-left, or self-reference
+| Argument | Flag | Notes |
+|---|---|---|
+| `input` | `-f` / `--file` | Path to a `.seq` input file |
+| `example` | `-e` | Use the built-in example diagram (conflicts with `--file`) |
+| `output` | (positional) | Required output PNG file path |
 
-## Current parser and renderer behavior
+Values are read with `options.get_one::<String>(...)` and `options.get_one::<bool>(...)`.
 
-### Document parser
+### `src/lib.rs` — Library root
 
-The document parser is line-based and intentionally permissive:
+- Declares public modules: `diagram`, `model`, `parsing`, `rendering`, `theme`.
+- Defines two type aliases used throughout the codebase:
+  - `InteractionSet = Vec<Interaction>`
+  - `ParticipantSet = HashSet<Participant>`
 
-- empty lines become `LineContents::Empty`
-- `#` lines become comments
-- `:` lines are parsed as metadata
-- lines containing `->` are attempted as interactions; if they don't match the interaction pattern they become `Invalid`
-- all other lines become `Invalid`
+### `src/model.rs` — Domain types
 
-Metadata currently recognizes:
+Key types:
 
-- `:theme`
-- `:title`
-- `:author`
-- `:date`
+| Type | Purpose |
+|---|---|
+| `Line` | A parsed line: `line_number`, `line_data` (raw string), `line_contents` |
+| `LineContents` | Enum: `Empty`, `Comment`, `MetaData(MetaDataType)`, `Interaction(From, To)`, `InteractionWithMessage(From, To, Msg)`, `Invalid` |
+| `MetaDataType` | Enum: `Style(String)`, `FontSize(f32)`, `Title(String)`, `Author(String)`, `Date`, `Invalid` |
+| `Participant` | Named participant with `index`, `active_from`, `active_to`, `rect: Rect` |
+| `Interaction` | Directional arrow: `index`, `from_participant`, `to_participant`, `interaction_type`, `message` |
+| `InteractionType` | Enum: `L2R`, `R2L`, `SelfRef` |
+| `Message` | Newtype wrapper around `String` |
+| `Config` | `input_source: Source`, `output_path: String` |
+| `Source` | Enum: `StdIn`, `File(String)`, `Example` |
 
-### Participant parser
+### `src/diagram.rs` — Diagram assembly
 
-The participant parser walks interaction lines only. It:
+`Diagram::parse(document: Document, theme: Theme) -> Diagram` orchestrates the second and third parsing stages:
 
-- records first-seen order for stable participant indexes
-- tracks first and last interaction positions
-- measures participant names to compute rectangles
-- shares a common max height across participant boxes
+1. Calls `ParticipantParser::parse(&document.lines, &theme)` → `ParticipantSet`
+2. Calls `InteractionParser::parse(&document.lines, &participants)` → `InteractionSet`
+3. Returns `Diagram { theme, header, interactions, participants, config }`.
 
-### Interaction parser
+### `src/theme.rs` — Visual theme
 
-The interaction parser:
+`Theme` holds all visual parameters:
 
-- converts parsed interaction lines into `Interaction` structs
-- looks up participants by name
-- sets `InteractionType` from participant index ordering
-- preserves optional message text
+- `title_font`, `body_font` — `fontdue::Font` instances loaded from embedded TTF bytes (`include_bytes!`).
+- `title_font_px`, `partic_font_px`, `message_font_px` — font sizes in pixels.
+- `document_border_width`, `partic_padding`, `partic_h_gap` — spacing values.
 
-### Rendering
+`Theme::default()` uses `Roboto-Thin.ttf` for both title and body fonts. Font loading uses `fontdue::FontSettings { collection_index: 0, scale: 18.0, load_substitutions: true }`.
 
-The renderer currently:
+### `src/parsing/document.rs` — Document parsing
 
-- computes a drawing surface size from participant bounds and interaction count
-- draws participant boxes
-- draws participant text
-- writes a PNG to the requested output path
+`DocumentParser::parse(input: &[String], config: Config) -> Document`
 
-This repository already has strong unit coverage for parsing and text helpers. The rendering surface is small enough that visual verification is still useful for documentation or layout work.
+Uses `Iterator::enumerate` to assign line numbers, and classifies each input line:
 
-## Commands you should use
+- Empty → `LineContents::Empty`
+- Starts with `#` → `LineContents::Comment`
+- Starts with `:` → metadata via `parse_metadata()`
+- Contains `->` → interaction via `parse_interaction()` using the regex `^(.+)\s+-+>+\s+([^:]+):?(.*)$`
+- Otherwise → `LineContents::Invalid`
 
-### Prerequisite on Ubuntu/Linux
+The regex is lazily initialised via `std::sync::OnceLock` (no `lazy_static` dependency).
 
-The Rust dependencies require fontconfig development headers:
+`parse_metadata` recognises `:theme`, `:title`, `:author`, `:date` keywords. A bare keyword with no trailing value returns `LineContents::Invalid`.
+
+### `src/parsing/participant.rs` — Participant parsing
+
+`ParticipantParser::parse(document: &[Line], theme: &Theme) -> ParticipantSet`
+
+Single-pass over interaction lines (ignoring all other line types):
+
+1. Discovers participants in order of first appearance, assigning sequential indices.
+2. Tracks `active_from` (first interaction index) and `active_to` (last interaction index) for each participant.
+3. Measures each participant's label width using `rendering::text::measure_string()` to compute `Rect` geometry.
+4. Returns a `HashSet<Participant>`.
+
+### `src/parsing/interaction.rs` — Interaction parsing
+
+`InteractionParser::parse(document: &[Line], participants: &HashSet<Participant>) -> InteractionSet`
+
+Filters to only interaction lines, looks up the `Participant` objects by name, determines `InteractionType` by comparing participant indices (`L2R`, `R2L`, `SelfRef`), and returns a `Vec<Interaction>`.
+
+### `src/rendering/mod.rs` — Rendering
+
+- `Diagram::render()` — computes overall image size, creates a `RenderContext` (white background `DrawTarget`), renders all participants sorted by `index`, and writes a PNG via `DrawTarget::write_png()`.
+- `Participant::render()` — draws a stroked rectangle (`StrokeStyle { width: 0.5 }`) and the participant label via `draw_text()`.
+- `Diagram::size()` (via the `Sizable` trait) — derives `width` and `height` from participant positions and interaction count.
+- `RenderContext { pub theme: Theme, pub draw_target: DrawTarget }` — wraps the drawing surface and active theme.
+
+### `src/rendering/text.rs` — Text utilities
+
+- `measure_string(theme, content, px) -> Rect` — uses `fontdue::layout::Layout` to compute the bounding box of a string without drawing it.
+- `draw_text(rc, content, x, y, px)` — lays out and rasterises each glyph using `font.rasterize(glyph.parent, px)`, composites it onto the `DrawTarget` via `draw_image_at`.
+  - In debug builds, draws a pink bounding box around each glyph (controlled by `#[cfg(debug_assertions)]`).
+- `rgb_to_u32(r, g, b, a) -> u32` — packs colour channels into a `u32` pixel value using `((a << 24) | (r << 16) | (g << 8) | b)`.
+
+---
+
+## Input DSL Syntax
+
+```
+# Lines starting with '#' are comments and are ignored.
+
+# Metadata directives (colon-prefixed):
+:theme Default
+:title My Diagram Title
+:author Author Name
+:date 2024-01-01
+# Note: ':date' requires at least one trailing character after the keyword
+# because the parser uses split_once(whitespace). A bare ':date' line with
+# no trailing content will be classified as Invalid by the current implementation.
+
+# Interaction lines:
+Client -> Server: Request message
+Server -> Server: Self-reference
+Server --> Client: Reply (dashed)
+Server ->> Service: Async arrow
+Service -->> Server: Async reply
+```
+
+The interaction regex `^(.+)\s+-+>+\s+([^:]+):?(.*)$` captures:
+- Group 1: from-participant name
+- Group 2: to-participant name
+- Group 3: optional message (after `:`)
+
+Arrow variants (`->`, `-->`, `->>`, `-->>`) are all matched by the same regex pattern (they are not yet differentiated in the model).
+
+---
+
+## Building and Running
 
 ```bash
-sudo apt-get update
+# System dependency (Ubuntu/Debian)
 sudo apt-get install -y libfontconfig1-dev
-```
 
-### Validate the current code
-
-```bash
-cd /home/runner/work/seq-rs/seq-rs
+# Build
 cargo build
+
+# Build (release)
+cargo build --release
+
+# Run with a file
+cargo run -- --file path/to/diagram.seq output.png
+
+# Run with the built-in example
+cargo run -- -e output.png
+
+# Run with stdin
+echo "Client -> Server: Hello" | cargo run -- output.png
+
+# Enable logging
+RUST_LOG=info cargo run -- -e output.png
+RUST_LOG=debug cargo run -- -e output.png
+```
+
+---
+
+## Testing
+
+Tests are written inside `#[cfg(test)]` modules within each source file. Run them with:
+
+```bash
 cargo test
+cargo test --verbose
 ```
 
-### Generate the built-in example output
+### Active tests
+
+**`src/parsing/document.rs`** (`tests` module):
+
+| Test name | What it covers |
+|---|---|
+| `test_parse_metadata_title` | `:title` metadata parsing |
+| `test_parse_metadata_title_with_whitespace` | Metadata parsing with extra whitespace |
+| `test_parse_metadata_theme` | `:theme` keyword |
+| `test_parse_metadata_author` | `:author` keyword |
+| `test_parse_metadata_date` | `:date` keyword |
+| `test_parse_metadata_unknown_key` | Unknown metadata key → `MetaDataType::Invalid` |
+| `test_parse_metadata_no_value_returns_invalid` | Bare keyword (no value) → `Invalid` |
+| `test_parse_interaction_simple` | Simple `A -> B` interaction |
+| `test_parse_interaction_with_message` | `A -> B: msg` interaction |
+| `test_parse_interaction_no_match` | Non-interaction line → `Invalid` |
+| `test_document_parser_with_invalid` | Mixed valid/invalid lines produce correct `LineContents` |
+| `test_document_parser` | Full document with metadata, interactions, empty lines |
+| `test_document_parser_comment_lines` | Comment lines produce `LineContents::Comment` |
+| `test_document_is_valid` | `Document.is_valid` is `true` for a valid document |
+
+**`src/rendering/text.rs`** (`tests` module):
+
+| Test name | What it covers |
+|---|---|
+| `test_rgb_to_u32_black` | Packs black (0,0,0,255) correctly |
+| `test_rgb_to_u32_white` | Packs white (255,255,255,255) correctly |
+| `test_rgb_to_u32_blue` | Packs blue (0,0,255,255) correctly |
+| `test_rgb_to_u32_transparent` | Packs transparent (0,0,0,0) correctly |
+| `test_rgb_to_u32_clamps_above_255` | Values >255 are clamped |
+| `test_measure_string_single_char` | Single char returns sensible `Rect` |
+| `test_measure_string_two_chars_wider` | Two chars produce wider `Rect` than one |
+| `test_measure_string_same_height_for_same_font_size` | Same px → same height |
+| `test_measure_string_larger_px_gives_larger_height` | Larger px → taller glyphs |
+
+### Commented-out tests
+
+Several tests in `src/parsing/interaction.rs` and `src/parsing/participant.rs` are commented out because `Participant` now carries a `rect: Rect` field that requires `Theme` to compute. These tests can be re-enabled by constructing a `Theme::default()` and passing it to `ParticipantParser::parse`.
+
+---
+
+## Benchmarks
+
+All four benchmark suites are active. Run them with:
 
 ```bash
-cd /home/runner/work/seq-rs/seq-rs
-cargo run -- -e docs/example-output.png
-```
-
-### Run benchmarks
-
-```bash
-cd /home/runner/work/seq-rs/seq-rs
 cargo bench
 ```
 
-## How to make safe changes here
+| File | Benchmark name | What it measures |
+|---|---|---|
+| `benches/benchmark_document_parsing.rs` | `parsing document` | `DocumentParser::parse` throughput |
+| `benches/benchmark_diagram_parsing.rs` | `parsing participants` | `ParticipantParser::parse` throughput |
+| `benches/benchmark_diagram_parsing.rs` | `parsing interactions` | `InteractionParser::parse` throughput |
+| `benches/benchmark_rendering.rs` | `diagram parse` | Full `DocumentParser::parse` + `Diagram::parse` cycle |
+| `benches/text_benchmarks.rs` | `measure_string single char` | `measure_string` for one character |
+| `benches/text_benchmarks.rs` | `measure_string long string` | `measure_string` for a longer string |
+| `benches/text_benchmarks.rs` | `rgb_to_u32` | Pixel packing throughput |
 
-1. Keep changes narrow. Most features are localized to one parser or one rendering module.
-2. Prefer updating existing modules rather than introducing new abstraction layers.
-3. If you change parsing behavior, add or adjust unit tests in the same parser module.
-4. If you change rendering or layout behavior, run `cargo test` and also generate a real PNG for manual inspection.
-5. Avoid changing embedded fonts or theme defaults unless the task specifically requires it.
+---
 
-## Common gotchas
+## CI / CD
 
-- `cargo test` and `cargo build` can fail on clean Ubuntu systems without `libfontconfig1-dev`.
-- The output path is required by the CLI, even when using the built-in example.
-- The built-in example input lives in `src/main.rs` (`get_text()`), so README screenshots should match that source when possible.
-- The rendering code is compact and direct; visual regressions are easiest to catch by generating an actual output PNG.
+### `.github/workflows/build_and_test.yml`
 
-## Recommended workflow for future agents
+Runs on every push and pull request to `main`:
+1. Install `libfontconfig1-dev`
+2. `cargo build --verbose`
+3. `cargo test --verbose`
 
-When working on this repository:
+### `.github/workflows/codecov.yml`
 
-1. Read `README.md` and the relevant source module first.
-2. Confirm the native dependency is installed before assuming Rust failures are code regressions.
-3. Run existing tests before editing code.
-4. Make the smallest possible change in the parser or renderer that solves the task.
-5. Run targeted validation quickly, then run `cargo test`.
-6. If the change affects output or layout, generate a PNG and inspect it manually.
+Runs on every push and pull request to `main`:
+1. Install `libfontconfig1-dev`
+2. Install `cargo-tarpaulin`
+3. `cargo tarpaulin --out Xml` — collects line coverage
+4. Uploads results to [Codecov](https://codecov.io/gh/rsouth/seq-rs) and as a workflow artifact
 
-## If you need a quick orientation
+---
 
-Start here in order:
+## Key Design Decisions and Notes
 
-1. `/home/runner/work/seq-rs/seq-rs/src/main.rs`
-2. `/home/runner/work/seq-rs/seq-rs/src/parsing/document.rs`
-3. `/home/runner/work/seq-rs/seq-rs/src/parsing/participant.rs`
-4. `/home/runner/work/seq-rs/seq-rs/src/parsing/interaction.rs`
-5. `/home/runner/work/seq-rs/seq-rs/src/rendering/mod.rs`
-6. `/home/runner/work/seq-rs/seq-rs/src/rendering/text.rs`
+- **Library + binary split**: The crate is structured as a library (`lib.rs`) consumed by the binary (`main.rs`). This enables benchmarks and future integration tests to import public types and parsers directly.
+- **Fonts are embedded at compile time**: `include_bytes!` bakes the TTF files into the binary so no runtime font discovery is needed.
+- **`HashSet<Participant>` for participants**: Participants are stored in a `HashSet` and sorted by `index` at render time. This avoids duplicates when a participant appears in multiple interactions.
+- **Single-pass participant discovery**: `ParticipantParser` assigns indices in order of first appearance in the document, which determines left-to-right visual ordering.
+- **`raqote` + `fontdue` for rendering**: `raqote` provides a software 2D canvas (no GPU required); `fontdue` handles font loading, layout, and glyph rasterisation.
+- **`OnceLock` for regex**: The interaction regex is initialised once via `std::sync::OnceLock` — no `lazy_static` dependency.
+- **`fontdue` 0.9 API**: Uses `font.rasterize(glyph.parent, px)` where `glyph.parent` is the source `char`. The old `rasterize_indexed` API is no longer used.
+- **Interactions not yet fully differentiated**: Arrow variants (`->`, `-->`, `->>`, `-->>`) are all parsed the same way by the current regex; the dashed/async distinction is not yet surfaced in the model.
+- **`LineContents::Invalid` is non-fatal**: Invalid lines produce a `warn!` log but do not stop diagram generation.
+- **`Cargo.lock` is gitignored**: The project is a binary crate. Per Rust best practices, binary projects should commit `Cargo.lock` to guarantee reproducible builds. The current `.gitignore` excludes it; consider removing that exclusion.
+- **`src/mod.rs` is a legacy file**: It exists but contains only commented-out code; it is not imported or used anywhere.
+
+---
+
+## Extending the Codebase
+
+| Task | Where to look |
+|---|---|
+| Add a new metadata directive | `parsing/document.rs` → `parse_metadata()` and `model.rs` → `MetaDataType` |
+| Differentiate arrow styles | `model.rs` → new field on `Interaction` or extend `InteractionType`; update `parsing/document.rs` regex/parsing |
+| Render interaction arrows | `rendering/mod.rs` → implement `Render for Interaction` |
+| Add a new theme | `theme.rs` → new `Theme` variant or named constructor |
+| Add a new CLI flag | `cli.rs` → add `Arg`; `main.rs` → read and propagate to `Config` |
+| Add output formats | `rendering/mod.rs` → `Diagram::render()` — swap `write_png` for another encoder |

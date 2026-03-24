@@ -1,119 +1,194 @@
 # seq-rs
 
-[![codecov](https://codecov.io/gh/rsouth/seq-rs/branch/main/graph/badge.svg?token=W311JFSQV8)](https://codecov.io/gh/rsouth/seq-rs) [![Build Status](https://github.com/rsouth/seq-rs/workflows/Build/badge.svg)](https://github.com/rsouth/seq-rs/actions) [![Libraries.io](https://img.shields.io/librariesio/github/rsouth/seq-rs)](https://libraries.io/github/rsouth/seq-rs) [![License](https://img.shields.io/github/license/rsouth/seq-rs)](https://www.gnu.org/licenses/gpl-3.0.en.html)
+[![Build Status](https://github.com/rsouth/seq-rs/workflows/Build/badge.svg)](https://github.com/rsouth/seq-rs/actions)
+[![codecov](https://codecov.io/gh/rsouth/seq-rs/branch/main/graph/badge.svg?token=W311JFSQV8)](https://codecov.io/gh/rsouth/seq-rs)
+[![Libraries.io](https://img.shields.io/librariesio/github/rsouth/seq-rs)](https://libraries.io/github/rsouth/seq-rs)
+[![License](https://img.shields.io/github/license/rsouth/seq-rs)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
-`seq-rs` (published here as the `sequencer` crate/binary) is a small Rust command-line tool for turning a plain-text sequence diagram DSL into a PNG image.
+A command-line tool written in Rust that converts a plain-text sequence diagram DSL into a rendered PNG image.
 
-## What this repository contains
+---
 
-At a high level, the codebase is split into a few focused layers:
+## Example output
 
-- `src/cli.rs` defines the command-line interface with `clap`
-- `src/main.rs` loads input from `--file`, `-e` (example), or stdin and runs the pipeline
-- `src/parsing/` converts text lines into structured document, participant, and interaction data
-- `src/diagram.rs` assembles parsed data into a `Diagram`
-- `src/rendering/` draws participants and text into a PNG with `raqote` and `fontdue`
-- `src/theme.rs` owns embedded fonts and layout constants
-- `benches/` contains Criterion benchmarks for parsing and rendering hot paths
+Given the following input:
 
-The current flow is:
-
-1. Read input text
-2. Parse each line into metadata/comments/interactions
-3. Discover participants and interaction directions
-4. Build a `Diagram`
-5. Render the diagram to a PNG file
-
-## Key technologies
-
-- **Rust 2021** for the CLI and library code
-- **clap** for argument parsing
-- **regex** for the document-level DSL parsing
-- **fontdue** for text measurement and glyph rasterization
-- **raqote** for PNG drawing
-- **criterion** for benchmarks
-
-## Repository structure
-
-```text
-.
-├── assets/                  # Embedded fonts used by the default theme
-├── benches/                 # Criterion benchmark suites
-├── docs/                    # Checked-in example output used by the README
-├── src/
-│   ├── cli.rs               # CLI definition
-│   ├── diagram.rs           # Diagram assembly
-│   ├── lib.rs               # Library module exports and shared type aliases
-│   ├── main.rs              # Program entry point
-│   ├── model.rs             # Core domain types
-│   ├── parsing/             # Document, participant, and interaction parsers
-│   ├── rendering/           # Rendering context, sizing, and text drawing
-│   └── theme.rs             # Default fonts and spacing
-├── .github/workflows/       # Build and test automation
-├── AGENTS.md                # Working notes for future contributors/agents
-└── README.md                # Project overview and quick start
 ```
-
-## Input format
-
-The DSL is intentionally simple:
-
-```text
-:theme Default
 :title Example Sequence Diagram
 :author Mr. Sequence Diagram
-:date today
+:date 2024-01-01
 
+# diagram
 Client -> Server: Request
 Server -> Server: Parses request
 Server ->> Service: Query
 Service -->> Server: Data
 Server --> Client: Response
+Left -> Right
 ```
 
-- Metadata lines start with `:`
-- Comment lines start with `#`
-- Interaction lines use arrows like `->`, `-->`, `->>`, and `-->>`
-- A message is optional and follows `:`
+seq-rs produces:
 
-## Running the project
+![Example output](docs/example.png)
 
-On Ubuntu-based systems, install the native font dependency first:
+---
+
+## Installation
+
+### Prerequisites
+
+On Ubuntu/Debian, install the system font library before building:
 
 ```bash
-sudo apt-get update
 sudo apt-get install -y libfontconfig1-dev
 ```
 
-Then:
+### Build from source
 
 ```bash
-cargo build
+git clone https://github.com/rsouth/seq-rs.git
+cd seq-rs
+cargo build --release
+# binary is at target/release/sequencer
+```
+
+---
+
+## Usage
+
+```
+sequencer [OPTIONS] <output>
+
+Arguments:
+  <output>   Path to write the output PNG file
+
+Options:
+  -f, --file <file>   Read diagram input from a file
+  -e                  Use the built-in example diagram
+  -h, --help          Print help
+  -V, --version       Print version
+```
+
+### Examples
+
+**Render from a `.seq` file:**
+
+```bash
+sequencer --file path/to/diagram.seq output.png
+```
+
+**Render from stdin:**
+
+```bash
+echo "Client -> Server: Hello" | sequencer output.png
+```
+
+**Render the built-in example diagram:**
+
+```bash
+sequencer -e output.png
+```
+
+**Enable verbose logging:**
+
+```bash
+RUST_LOG=info sequencer -e output.png
+RUST_LOG=debug sequencer -e output.png
+```
+
+---
+
+## DSL Syntax
+
+```
+# Lines starting with '#' are comments and are ignored.
+
+# Metadata directives (colon-prefixed, written before interactions):
+:title  My Diagram Title
+:author Author Name
+:date   2024-01-01
+:theme  Default
+
+# Interaction lines  —  <From> -> <To>  or  <From> -> <To>: Message
+Client -> Server: Request
+Server -> Server: Self-reference
+Server --> Client: Reply
+Server ->> Service: Async request
+Service -->> Server: Async reply
+```
+
+### Rules
+
+| Line type | Syntax | Notes |
+|---|---|---|
+| Comment | `# text` | Ignored completely |
+| Title | `:title <text>` | Diagram heading |
+| Author | `:author <text>` | Author metadata |
+| Date | `:date <text>` | Date metadata (requires at least one word after `:date`) |
+| Theme | `:theme <name>` | Visual theme selection (currently `Default` only) |
+| Interaction | `A -> B` | Arrow from participant A to participant B |
+| Interaction with message | `A -> B: message` | Arrow with label |
+
+Arrow style variants (`->`, `-->`, `->>`, `-->>`) are all parsed — they are not yet visually differentiated.
+
+Participants are discovered implicitly in the order they first appear in the file, which determines their left-to-right visual order.
+
+---
+
+## Development
+
+### Run tests
+
+```bash
 cargo test
 ```
 
-To generate the built-in example image:
+### Run benchmarks
 
 ```bash
-cargo run -- -e docs/example-output.png
+cargo bench
 ```
 
-To render your own file:
+### Run with logging
 
 ```bash
-cargo run -- --file path/to/diagram.seq output.png
+RUST_LOG=debug cargo run -- -e output.png
 ```
 
-If no file or example flag is provided, the binary reads from stdin.
+---
 
-## Example output
+## Project layout
 
-The image below was generated from the built-in example input using the current renderer:
+```
+seq-rs/
+├── Cargo.toml              # Package metadata and dependencies
+├── assets/                 # Fonts embedded at compile time
+│   ├── Roboto-Thin.ttf
+│   ├── Roboto-Black.ttf
+│   └── OpenSans-Regular.ttf
+├── benches/                # Criterion benchmarks
+├── docs/                   # Documentation assets (e.g. example.png)
+├── src/
+│   ├── main.rs             # Binary entry point
+│   ├── cli.rs              # CLI definitions (clap)
+│   ├── lib.rs              # Library root and type aliases
+│   ├── model.rs            # Core domain types
+│   ├── diagram.rs          # Diagram assembly
+│   ├── theme.rs            # Visual theme (fonts, sizes, spacing)
+│   ├── parsing/
+│   │   ├── document.rs     # Text → Vec<Line>
+│   │   ├── participant.rs  # Lines → ParticipantSet
+│   │   └── interaction.rs  # Lines → InteractionSet
+│   └── rendering/
+│       ├── mod.rs          # Render traits, PNG output
+│       └── text.rs         # Font layout and glyph rasterisation
+└── .github/workflows/
+    ├── build_and_test.yml  # CI: build + test on every push/PR
+    └── codecov.yml         # Coverage upload to Codecov
+```
 
-![Example sequence diagram output](docs/example-output.png)
+---
 
-## Development notes
+## License
 
-- The CI workflow in `.github/workflows/build_and_test.yml` installs `libfontconfig1-dev`, then runs `cargo build --verbose` and `cargo test --verbose`
-- The renderer currently focuses on participant boxes and text placement; the parsing and rendering layers are intentionally small and easy to trace
-- See `AGENTS.md` for a fuller guide to the codebase and recommended collaboration workflow
+[GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
