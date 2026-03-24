@@ -9,7 +9,7 @@
 At a high level, the codebase is split into a few focused layers:
 
 - `src/cli.rs` defines the command-line interface with `clap`
-- `src/main.rs` loads input from `--file`, `--example`, or stdin and runs the pipeline
+- `src/main.rs` loads input from `--file`, `-e` (example), or stdin and runs the pipeline
 - `src/parsing/` converts text lines into structured document, participant, and interaction data
 - `src/diagram.rs` assembles parsed data into a `Diagram`
 - `src/rendering/` draws participants and text into a PNG with `raqote` and `fontdue`
