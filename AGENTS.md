@@ -12,7 +12,7 @@ The typical workflow is:
 
 ```
 text input (file / stdin / built-in example)
-  → DocumentParser   (parse lines into typed LineContents)
+  → DocumentParser    (parse lines into typed LineContents)
   → ParticipantParser (extract participants + compute geometry)
   → InteractionParser (extract arrows / interactions)
   → Diagram           (assembled data model)
@@ -25,17 +25,16 @@ text input (file / stdin / built-in example)
 
 | Concern | Crate / Tool |
 |---|---|
-| Language | Rust (edition 2018) |
+| Language | Rust (edition 2021) |
 | Build & package manager | Cargo |
-| CLI argument parsing | `clap` 3.0.0-beta.2 |
+| CLI argument parsing | `clap` 4 (with `derive` + `cargo` features) |
 | 2D rendering | `raqote` 0.8 (with `pathfinder_geometry`) |
-| Font rasterisation & layout | `fontdue` 0.5 |
+| Font rasterisation & layout | `fontdue` 0.9 |
 | Geometry primitives | `euclid`, `pathfinder_geometry` |
-| Regex parsing | `regex` 1.5 |
-| Iterator utilities | `itertools` 0.10 |
-| Lazy statics | `lazy_static` 1.4 |
-| Logging | `log` + `pretty_env_logger` |
-| Benchmarking | `criterion` 0.3 |
+| Regex parsing | `regex` 1 |
+| Iterator utilities | `itertools` 0.14 |
+| Logging | `log` 0.4 + `pretty_env_logger` 0.5 |
+| Benchmarking | `criterion` 0.8 |
 | CI | GitHub Actions |
 | Code coverage | `cargo-tarpaulin` + Codecov |
 
@@ -51,17 +50,19 @@ seq-rs/
 ├── assets/
 │   ├── OpenSans-Regular.ttf     # Bundled fonts (included at compile time)
 │   ├── Roboto-Black.ttf
-│   └── Roboto-Thin.ttf          # Currently used by Theme::default()
+│   └── Roboto-Thin.ttf          # Used by Theme::default()
 ├── benches/
-│   ├── benchmark_diagram_parsing.rs   # Criterion benchmarks: participant + interaction parsing
-│   ├── benchmark_document_parsing.rs  # Criterion benchmarks: document parsing
-│   ├── benchmark_rendering.rs         # (disabled in Cargo.toml)
-│   └── text_benchmarks.rs             # (disabled in Cargo.toml)
+│   ├── benchmark_diagram_parsing.rs   # Criterion: participant + interaction parsing
+│   ├── benchmark_document_parsing.rs  # Criterion: document parsing
+│   ├── benchmark_rendering.rs         # Criterion: full diagram parse+render cycle
+│   └── text_benchmarks.rs             # Criterion: measure_string, rgb_to_u32
+├── docs/
+│   └── example.png              # Example output image (referenced by README)
 ├── src/
 │   ├── main.rs       # Binary entry point
 │   ├── cli.rs        # CLI argument definitions (clap)
 │   ├── lib.rs        # Library root; module exports; type aliases
-│   ├── mod.rs        # (empty / legacy, all content commented out)
+│   ├── mod.rs        # Legacy file — all content commented out; not used
 │   ├── model.rs      # Core domain types
 │   ├── diagram.rs    # Diagram struct + parse() orchestration
 │   ├── theme.rs      # Theme (fonts, sizes, spacing)
@@ -69,7 +70,7 @@ seq-rs/
 │   │   ├── mod.rs         # Re-exports document, interaction, participant
 │   │   ├── document.rs    # DocumentParser: text → Vec<Line>
 │   │   ├── interaction.rs # InteractionParser: Vec<Line> → InteractionSet
-│   │   └── participant.rs # ParticipantParser: Vec<Line> → ParticipantSet (with geometry)
+│   │   └── participant.rs # ParticipantParser: Vec<Line> → ParticipantSet
 │   └── rendering/
 │       ├── mod.rs    # Render traits, RenderContext, Diagram::render(), Participant::render()
 │       └── text.rs   # measure_string() and draw_text() via fontdue
@@ -89,17 +90,19 @@ seq-rs/
 - Calls `parse_cli_args()` to read CLI flags via `cli.rs`.
 - Calls `load_data()` to read lines from a file path, stdin, or the built-in example string.
 - Runs the full parsing + rendering pipeline.
-- Warns about any lines classified as `LineContents::Invalid`.
+- Warns (via `log::warn!`) about any lines classified as `LineContents::Invalid`.
 
 ### `src/cli.rs` — CLI argument parsing
 
-Three arguments are defined with `clap`:
+Three arguments are defined using `clap` 4's builder API:
 
 | Argument | Flag | Notes |
 |---|---|---|
 | `input` | `-f` / `--file` | Path to a `.seq` input file |
 | `example` | `-e` | Use the built-in example diagram (conflicts with `--file`) |
 | `output` | (positional) | Required output PNG file path |
+
+Values are read with `options.get_one::<String>(...)` and `options.get_one::<bool>(...)`.
 
 ### `src/lib.rs` — Library root
 
@@ -116,7 +119,7 @@ Key types:
 |---|---|
 | `Line` | A parsed line: `line_number`, `line_data` (raw string), `line_contents` |
 | `LineContents` | Enum: `Empty`, `Comment`, `MetaData(MetaDataType)`, `Interaction(From, To)`, `InteractionWithMessage(From, To, Msg)`, `Invalid` |
-| `MetaDataType` | Enum: `Style`, `FontSize`, `Title`, `Author`, `Date`, `Invalid` |
+| `MetaDataType` | Enum: `Style(String)`, `FontSize(f32)`, `Title(String)`, `Author(String)`, `Date`, `Invalid` |
 | `Participant` | Named participant with `index`, `active_from`, `active_to`, `rect: Rect` |
 | `Interaction` | Directional arrow: `index`, `from_participant`, `to_participant`, `interaction_type`, `message` |
 | `InteractionType` | Enum: `L2R`, `R2L`, `SelfRef` |
@@ -140,13 +143,13 @@ Key types:
 - `title_font_px`, `partic_font_px`, `message_font_px` — font sizes in pixels.
 - `document_border_width`, `partic_padding`, `partic_h_gap` — spacing values.
 
-`Theme::default()` uses `Roboto-Thin.ttf` for both title and body fonts.
+`Theme::default()` uses `Roboto-Thin.ttf` for both title and body fonts. Font loading uses `fontdue::FontSettings { collection_index: 0, scale: 18.0, load_substitutions: true }`.
 
 ### `src/parsing/document.rs` — Document parsing
 
-`DocumentParser::parse(lines: &[String], config: Config) -> Document`
+`DocumentParser::parse(input: &[String], config: Config) -> Document`
 
-Classifies each input line by inspecting its content:
+Uses `Iterator::enumerate` to assign line numbers, and classifies each input line:
 
 - Empty → `LineContents::Empty`
 - Starts with `#` → `LineContents::Comment`
@@ -154,7 +157,9 @@ Classifies each input line by inspecting its content:
 - Contains `->` → interaction via `parse_interaction()` using the regex `^(.+)\s+-+>+\s+([^:]+):?(.*)$`
 - Otherwise → `LineContents::Invalid`
 
-`parse_metadata` recognises `:theme`, `:title`, `:author`, `:date` keywords.
+The regex is lazily initialised via `std::sync::OnceLock` (no `lazy_static` dependency).
+
+`parse_metadata` recognises `:theme`, `:title`, `:author`, `:date` keywords. A bare keyword with no trailing value returns `LineContents::Invalid`.
 
 ### `src/parsing/participant.rs` — Participant parsing
 
@@ -175,16 +180,17 @@ Filters to only interaction lines, looks up the `Participant` objects by name, d
 
 ### `src/rendering/mod.rs` — Rendering
 
-- `Diagram::render()` — computes overall image size, creates a `RenderContext` (white background `DrawTarget`), renders all participants, and writes a PNG using `DrawTarget::write_png()`.
-- `Participant::render()` — draws a stroked rectangle and the participant label via `draw_text()`.
-- `Diagram::size()` — derives `width` and `height` from participant positions and interaction count.
-- `RenderContext` — wraps a `DrawTarget` and the active `Theme`.
+- `Diagram::render()` — computes overall image size, creates a `RenderContext` (white background `DrawTarget`), renders all participants sorted by `index`, and writes a PNG via `DrawTarget::write_png()`.
+- `Participant::render()` — draws a stroked rectangle (`StrokeStyle { width: 0.5 }`) and the participant label via `draw_text()`.
+- `Diagram::size()` (via the `Sizable` trait) — derives `width` and `height` from participant positions and interaction count.
+- `RenderContext { pub theme: Theme, pub draw_target: DrawTarget }` — wraps the drawing surface and active theme.
 
 ### `src/rendering/text.rs` — Text utilities
 
 - `measure_string(theme, content, px) -> Rect` — uses `fontdue::layout::Layout` to compute the bounding box of a string without drawing it.
-- `draw_text(rc, content, x, y, px)` — lays out and rasterises each glyph, composites it onto the `DrawTarget` via `draw_image_at`.
-- `rgb_to_u32(r, g, b, a) -> u32` — packs colour channels into a `u32` pixel value.
+- `draw_text(rc, content, x, y, px)` — lays out and rasterises each glyph using `font.rasterize(glyph.parent, px)`, composites it onto the `DrawTarget` via `draw_image_at`.
+  - In debug builds, draws a pink bounding box around each glyph (controlled by `#[cfg(debug_assertions)]`).
+- `rgb_to_u32(r, g, b, a) -> u32` — packs colour channels into a `u32` pixel value using `((a << 24) | (r << 16) | (g << 8) | b)`.
 
 ---
 
@@ -222,6 +228,9 @@ Arrow variants (`->`, `-->`, `->>`, `-->>`) are all matched by the same regex pa
 ## Building and Running
 
 ```bash
+# System dependency (Ubuntu/Debian)
+sudo apt-get install -y libfontconfig1-dev
+
 # Build
 cargo build
 
@@ -246,7 +255,7 @@ RUST_LOG=debug cargo run -- -e output.png
 
 ## Testing
 
-Tests are written as inline `#[test]` functions within source files. Run them with:
+Tests are written inside `#[cfg(test)]` modules within each source file. Run them with:
 
 ```bash
 cargo test
@@ -255,12 +264,38 @@ cargo test --verbose
 
 ### Active tests
 
-| File | Test name | What it covers |
-|---|---|---|
-| `src/parsing/document.rs` | `test_parse_metadata` | `:title` metadata parsing with and without whitespace |
-| `src/parsing/document.rs` | `test_document_parser_with_invalid` | Mixed valid/invalid lines produce correct `LineContents` |
-| `src/parsing/document.rs` | `test_document_parser` | Full document with metadata, interactions, empty lines |
-| `src/rendering/text.rs` | `test_measure_text` | `measure_string` returns correct `Rect` for single and double character strings |
+**`src/parsing/document.rs`** (`tests` module):
+
+| Test name | What it covers |
+|---|---|
+| `test_parse_metadata_title` | `:title` metadata parsing |
+| `test_parse_metadata_title_with_whitespace` | Metadata parsing with extra whitespace |
+| `test_parse_metadata_theme` | `:theme` keyword |
+| `test_parse_metadata_author` | `:author` keyword |
+| `test_parse_metadata_date` | `:date` keyword |
+| `test_parse_metadata_unknown_key` | Unknown metadata key → `MetaDataType::Invalid` |
+| `test_parse_metadata_no_value_returns_invalid` | Bare keyword (no value) → `Invalid` |
+| `test_parse_interaction_simple` | Simple `A -> B` interaction |
+| `test_parse_interaction_with_message` | `A -> B: msg` interaction |
+| `test_parse_interaction_no_match` | Non-interaction line → `Invalid` |
+| `test_document_parser_with_invalid` | Mixed valid/invalid lines produce correct `LineContents` |
+| `test_document_parser` | Full document with metadata, interactions, empty lines |
+| `test_document_parser_comment_lines` | Comment lines produce `LineContents::Comment` |
+| `test_document_is_valid` | `Document.is_valid` is `true` for a valid document |
+
+**`src/rendering/text.rs`** (`tests` module):
+
+| Test name | What it covers |
+|---|---|
+| `test_rgb_to_u32_black` | Packs black (0,0,0,255) correctly |
+| `test_rgb_to_u32_white` | Packs white (255,255,255,255) correctly |
+| `test_rgb_to_u32_blue` | Packs blue (0,0,255,255) correctly |
+| `test_rgb_to_u32_transparent` | Packs transparent (0,0,0,0) correctly |
+| `test_rgb_to_u32_clamps_above_255` | Values >255 are clamped |
+| `test_measure_string_single_char` | Single char returns sensible `Rect` |
+| `test_measure_string_two_chars_wider` | Two chars produce wider `Rect` than one |
+| `test_measure_string_same_height_for_same_font_size` | Same px → same height |
+| `test_measure_string_larger_px_gives_larger_height` | Larger px → taller glyphs |
 
 ### Commented-out tests
 
@@ -270,7 +305,7 @@ Several tests in `src/parsing/interaction.rs` and `src/parsing/participant.rs` a
 
 ## Benchmarks
 
-Benchmarks use [Criterion](https://github.com/bheisler/criterion.rs). Two benchmark suites are active:
+All four benchmark suites are active. Run them with:
 
 ```bash
 cargo bench
@@ -281,8 +316,10 @@ cargo bench
 | `benches/benchmark_document_parsing.rs` | `parsing document` | `DocumentParser::parse` throughput |
 | `benches/benchmark_diagram_parsing.rs` | `parsing participants` | `ParticipantParser::parse` throughput |
 | `benches/benchmark_diagram_parsing.rs` | `parsing interactions` | `InteractionParser::parse` throughput |
-
-Two benchmark files (`benchmark_rendering.rs`, `text_benchmarks.rs`) exist but are commented out in `Cargo.toml`.
+| `benches/benchmark_rendering.rs` | `diagram parse` | Full `DocumentParser::parse` + `Diagram::parse` cycle |
+| `benches/text_benchmarks.rs` | `measure_string single char` | `measure_string` for one character |
+| `benches/text_benchmarks.rs` | `measure_string long string` | `measure_string` for a longer string |
+| `benches/text_benchmarks.rs` | `rgb_to_u32` | Pixel packing throughput |
 
 ---
 
@@ -291,14 +328,17 @@ Two benchmark files (`benchmark_rendering.rs`, `text_benchmarks.rs`) exist but a
 ### `.github/workflows/build_and_test.yml`
 
 Runs on every push and pull request to `main`:
-1. `cargo build --verbose`
-2. `cargo test --verbose`
+1. Install `libfontconfig1-dev`
+2. `cargo build --verbose`
+3. `cargo test --verbose`
 
 ### `.github/workflows/codecov.yml`
 
-Runs on every push:
-1. `cargo-tarpaulin` collects line coverage.
-2. Results are uploaded to [Codecov](https://codecov.io/gh/rsouth/seq-rs).
+Runs on every push and pull request to `main`:
+1. Install `libfontconfig1-dev`
+2. Install `cargo-tarpaulin`
+3. `cargo tarpaulin --out Xml` — collects line coverage
+4. Uploads results to [Codecov](https://codecov.io/gh/rsouth/seq-rs) and as a workflow artifact
 
 ---
 
@@ -309,9 +349,12 @@ Runs on every push:
 - **`HashSet<Participant>` for participants**: Participants are stored in a `HashSet` and sorted by `index` at render time. This avoids duplicates when a participant appears in multiple interactions.
 - **Single-pass participant discovery**: `ParticipantParser` assigns indices in order of first appearance in the document, which determines left-to-right visual ordering.
 - **`raqote` + `fontdue` for rendering**: `raqote` provides a software 2D canvas (no GPU required); `fontdue` handles font loading, layout, and glyph rasterisation.
+- **`OnceLock` for regex**: The interaction regex is initialised once via `std::sync::OnceLock` — no `lazy_static` dependency.
+- **`fontdue` 0.9 API**: Uses `font.rasterize(glyph.parent, px)` where `glyph.parent` is the source `char`. The old `rasterize_indexed` API is no longer used.
 - **Interactions not yet fully differentiated**: Arrow variants (`->`, `-->`, `->>`, `-->>`) are all parsed the same way by the current regex; the dashed/async distinction is not yet surfaced in the model.
 - **`LineContents::Invalid` is non-fatal**: Invalid lines produce a `warn!` log but do not stop diagram generation.
 - **`Cargo.lock` is gitignored**: The project is a binary crate. Per Rust best practices, binary projects should commit `Cargo.lock` to guarantee reproducible builds. The current `.gitignore` excludes it; consider removing that exclusion.
+- **`src/mod.rs` is a legacy file**: It exists but contains only commented-out code; it is not imported or used anywhere.
 
 ---
 
